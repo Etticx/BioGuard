@@ -10,8 +10,8 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app import create_app, MAX_UPLOAD_BYTES
-from predictor import InvalidPhoto, prepare_image
-from setup_model import extract_package
+from predictor import BioGuardPredictor, InvalidPhoto, prepare_image
+from setup_model import ARCHIVE, REQUIRED, ensure_package, extract_package
 
 
 def photo_bytes(mode="RGB", size=(480, 240), color="green", format="PNG"):
@@ -22,11 +22,14 @@ def photo_bytes(mode="RGB", size=(480, 240), color="green", format="PNG"):
 
 class Predictor:
     classes = ["Mimosa pudica"] * 9
+    architecture = "EfficientNetV2B0"
+    review_threshold = 0.56
 
     def predict(self, content):
         prepare_image(content)
         return {
-            "predicted_species": "Mimosa pudica", "confidence": 0.81,
+            "predicted_species": "Mimosa pudica", "common_name": "Touch-me-not",
+            "sdp_listed_invasive": True, "confidence": 0.81,
             "uncertain_identification": False, "known_class_scope_only": True,
             "supported_species_count": 9,
         }
@@ -40,7 +43,8 @@ def client():
 
 def test_health_states_no_storage(client):
     assert client.get("/health").json() == {
-        "status": "ready", "supported_species_count": 9,
+        "status": "ready", "model_architecture": "EfficientNetV2B0",
+        "review_threshold": 0.56, "supported_species_count": 9,
         "stores_photos": False, "stores_results": False,
     }
 
@@ -51,6 +55,8 @@ def test_photo_to_identification(client):
     assert response.status_code == 200
     assert response.json()["predicted_species"] == "Mimosa pudica"
     assert response.json()["confidence"] == 0.81
+    assert response.json()["common_name"] == "Touch-me-not"
+    assert response.json()["sdp_listed_invasive"] is True
 
 
 @pytest.mark.parametrize("content,content_type,status", [
@@ -126,9 +132,51 @@ def test_model_exception_returns_a_readable_error():
 def test_archive_paths_are_checked_before_any_extraction(tmp_path):
     archive = tmp_path / "unsafe.zip"
     with ZipFile(archive, "w") as package:
-        for name in ["bioguard.keras", "class_names.json", "preprocessing.json", "selection.json"]:
+        for name in REQUIRED:
             package.writestr(name, b"placeholder")
         package.writestr("../outside.txt", b"invalid")
     with pytest.raises(ValueError, match="unsafe"):
         extract_package(archive, tmp_path / "model")
     assert not (tmp_path / "outside.txt").exists()
+
+
+@pytest.mark.parametrize("confidence,threshold,uncertain", [
+    (0.55, 0.56, True), (0.56, 0.56, False), (0.95, 0.56, False), (0.99, None, True),
+])
+@pytest.mark.parametrize("invasive", [True, False])
+def test_prediction_uncertainty_and_species_metadata(confidence, threshold, uncertain, invasive):
+    class Prediction:
+        def numpy(self):
+            return np.array([[confidence, 1 - confidence]], dtype=np.float32)
+
+    model = BioGuardPredictor.__new__(BioGuardPredictor)
+    model.classes = ["Mimosa pudica", "Ficus microcarpa"]
+    model.config = {"image_size": 224}
+    model.review_threshold = threshold
+    model.catalog = {"Mimosa pudica": {"common_name": "Touch-me-not"}}
+    model.policy = {"Mimosa pudica": {"sdp_invasive": invasive}}
+    model.model = lambda pixels, training: Prediction()
+    result = model.predict(photo_bytes())
+    assert result["uncertain_identification"] is uncertain
+    assert result["common_name"] == "Touch-me-not"
+    assert result["sdp_listed_invasive"] is invasive
+    assert result["known_class_scope_only"] is True
+
+
+def test_installing_a_changed_package_replaces_the_previous_model(tmp_path):
+    destination = tmp_path / "installed"
+    archive = tmp_path / "model.zip"
+    for model_content in (b"original model", b"new winner"):
+        with ZipFile(archive, "w") as package:
+            for filename in REQUIRED:
+                package.writestr(filename, model_content if filename == "bioguard.keras" else b"{}")
+        ensure_package(archive, destination)
+        assert (destination / "bioguard.keras").read_bytes() == model_content
+    # A missing required file must be repaired even when the archive has not changed.
+    (destination / "species_policy.json").unlink()
+    ensure_package(archive, destination)
+    assert (destination / "species_policy.json").exists()
+
+
+def test_default_package_is_the_comparison_winner():
+    assert ARCHIVE.name == "bioguard_comparison_winner.zip"

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BioGuard · Photo review</title>
+<style>
+:root{color-scheme:light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1e2822;background:#f7f8f4}
+*{box-sizing:border-box}body{margin:0}button,select,textarea{font:inherit}
+button,a,select{touch-action:manipulation}button{cursor:pointer}
+header{max-width:1100px;margin:auto;padding:28px 24px 20px;display:flex;justify-content:space-between;gap:20px;align-items:center}
+.brand{font-weight:650;font-size:20px;letter-spacing:-.4px}.muted{color:#626b64}.small{font-size:13px;line-height:1.5}
+main{max-width:1100px;margin:auto;padding:0 24px 32px}.heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin:10px 0 22px}
+h1{font-size:26px;font-weight:600;letter-spacing:-.6px;margin:0 0 8px}h2{font-size:22px;font-weight:600;line-height:1.35;margin:6px 0 16px}
+p{line-height:1.5;margin:0}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+select,button,textarea{border:1px solid #dfe5dc;border-radius:10px;background:#fff;color:#1e2822}
+select{padding:10px 32px 10px 12px;max-width:100%}.button{padding:10px 16px;min-height:44px}.primary{background:#235b42;color:#fff;border-color:#235b42}
+button:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid #8fae99;outline-offset:3px}
+button:disabled{opacity:.45;cursor:default}.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);gap:30px;align-items:start}
+.figure{background:#fff;border:1px solid #dfe5dc;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;height:470px}
+.figure img{max-width:100%;max-height:100%;object-fit:contain}
+.meta{margin-top:12px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}.meta a{color:#235b42}
+.license{font-size:12px;line-height:1.6;color:#626b64;overflow-wrap:anywhere;margin-top:12px}
+.tag{display:inline-block;padding:4px 9px;border-radius:6px;background:#eaf0e7;color:#235b42;font-size:12px;font-weight:600}
+.note{border-left:3px solid #d4dfcf;padding:0 0 0 12px;font-size:14px;color:#626b64;line-height:1.5;margin:12px 0 20px}
+.choices{display:grid;gap:8px;margin:16px 0}.choice{text-align:left;padding:12px 14px;min-height:48px;border-radius:10px;font-size:15px}
+.choice[aria-pressed=true]{background:#eaf0e7;border-color:#235b42;color:#235b42;font-weight:600}
+textarea{display:block;width:100%;min-height:80px;resize:vertical;padding:12px;margin:8px 0 16px;font-size:14px}
+label{font-size:14px}.nav{display:flex;justify-content:space-between;gap:10px;margin-top:16px}.progress{font-variant-numeric:tabular-nums}
+.notice{font-size:14px;color:#785b24;background:#f5efdf;padding:10px 12px;border-radius:8px;margin:12px 0}
+footer{margin-top:26px;padding-top:18px;border-top:1px solid #dfe5dc;display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap}
+#saveMessage{min-height:20px}
+@media(max-width:760px){header{padding-top:20px}.heading{display:block}.heading>p{margin-top:12px}.grid{grid-template-columns:1fr;gap:22px}.figure{height:340px}.toolbar{align-items:stretch}.toolbar select{flex:1}.heading h1{font-size:24px}h2{font-size:21px}}
+</style>
+</head>
+<body>
+<header><div class="brand">BioGuard <span class="muted" style="font-weight:400">/ Photo review</span></div><span class="tag">Training · Batch 01</span></header>
+<main>
+<div class="heading"><div><h1>A closer look at our data.</h1><p class="muted">30 original photos. Review photo quality and flag uncertain labels.</p></div><p id="progress" class="small progress" aria-live="polite"></p></div>
+<div class="toolbar"><label for="speciesFilter" class="small">Species</label><select id="speciesFilter"><option value="">All species</option></select><label for="statusFilter" class="small">Show</label><select id="statusFilter"><option value="all">All photos</option><option value="pending">Unreviewed</option><option value="flagged">Flagged for follow-up</option></select></div>
+<div class="grid" id="reviewContent">
+<section aria-label="Original photo">
+<div class="figure"><img id="photo" alt=""></div>
+<div class="meta small"><span id="dimensions" class="muted"></span><a id="sourceLink" target="_blank" rel="noopener noreferrer">Open iNaturalist observation ↗</a></div>
+<p id="attribution" class="license"></p>
+</section>
+<section aria-label="Review decision">
+<span class="small muted">Dataset label · not independently confirmed</span><h2 id="species"></h2>
+<p id="photoId" class="small muted"></p>
+<div class="note">Check: is the plant clear, large enough, and the main subject? If you cannot confidently assess its species, choose “Label needs checking”.</div>
+<div id="flags" class="notice" hidden></div>
+<div class="choices" id="choices">
+<button class="choice" data-status="usable" aria-pressed="false">Photo looks usable</button>
+<button class="choice" data-status="label_needs_checking" aria-pressed="false">Label needs checking</button>
+<button class="choice" data-status="unusable" aria-pressed="false">Photo unusable</button>
+<button class="choice" data-status="possible_duplicate" aria-pressed="false">Possible duplicate</button>
+</div>
+<label for="notes">Notes <span class="muted">(optional)</span></label>
+<textarea id="notes" placeholder="For example: several plants in frame; target unclear."></textarea>
+<p class="small muted">“Usable” records photo quality only. It does not certify the species label. Source photos and labels remain unchanged.</p>
+<div class="nav"><button class="button" id="previous">Previous</button><button class="button primary" id="next">Next photo →</button></div>
+<p id="position" class="small muted" style="margin-top:12px"></p>
+</section>
+</div>
+<p id="empty" class="muted" hidden>No photos match this filter. Change the filter to continue.</p>
+<footer><div><p class="small" id="saveMessage" aria-live="polite"></p><p class="small muted">Progress is saved in this browser. Export a backup before switching browsers.</p></div><button class="button" id="export">Export review decisions</button></footer>
+</main>
+<script>
+'use strict';
+const DATA = [{"photo_id": "373033057", "expected_species": "Cleome rutidosperma", "split": "train", "observer_id": "1059559", "observation_id": "211020010", "image": "photos/373033057.jpg", "observation_url": "https://www.inaturalist.org/observations/211020010", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/373033057/medium.jpeg", "photo_license": "cc-by-sa", "attribution": "(c) deepachandran, some rights reserved (CC BY-SA)", "width": 500, "height": 333, "sha256": "69bc2f859947146739d906fe6190e2dc53763c946e02405a3168c1ba56951fc4", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "627977889", "expected_species": "Cleome rutidosperma", "split": "train", "observer_id": "1438015", "observation_id": "342872152", "image": "photos/627977889.jpg", "observation_url": "https://www.inaturalist.org/observations/342872152", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/627977889/medium.jpg", "photo_license": "cc-by", "attribution": "(c) Yung-Lun Lin, some rights reserved (CC BY)", "width": 500, "height": 333, "sha256": "4cbdce4386672d9ef4136f680c7f38b9f3101e36438406d7bc62e3baa492fcd3", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "370615604", "expected_species": "Cleome rutidosperma", "split": "train", "observer_id": "638416", "observation_id": "209426420", "image": "photos/370615604.jpg", "observation_url": "https://www.inaturalist.org/observations/209426420", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/370615604/medium.jpeg", "photo_license": "cc-by", "attribution": "(c) renjus box, some rights reserved (CC BY)", "width": 500, "height": 363, "sha256": "d4b9eecc59e88013afdef029f60140fb5fa7dc96cb78d8c29c201c501e5f7342", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "569447756", "expected_species": "Cleome rutidosperma", "split": "train", "observer_id": "3118956", "observation_id": "315231372", "image": "photos/569447756.jpg", "observation_url": "https://www.inaturalist.org/observations/315231372", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/569447756/medium.jpg", "photo_license": "cc-by", "attribution": "(c) Sophia Lee, some rights reserved (CC BY)", "width": 375, "height": 500, "sha256": "4a11b241a9cde9584e4a44f5f053d69b35ee32096e420e7fd21bb371267fa583", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "541204663", "expected_species": "Cleome rutidosperma", "split": "train", "observer_id": "1005840", "observation_id": "300370297", "image": "photos/541204663.jpg", "observation_url": "https://www.inaturalist.org/observations/300370297", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/541204663/medium.jpg", "photo_license": "cc0", "attribution": "no rights reserved", "width": 375, "height": 500, "sha256": "4954c0820d0ad6390b35538d9ead4bdcb1009e95b241662f7e202f473aef2041", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "646233683", "expected_species": "Cleome rutidosperma", "split": "train", "observer_id": "890554", "observation_id": "354222105", "image": "photos/646233683.jpg", "observation_url": "https://www.inaturalist.org/observations/354222105", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/646233683/medium.jpg", "photo_license": "cc-by", "attribution": "(c) Ong Jyh Seng, some rights reserved (CC BY)", "width": 500, "height": 375, "sha256": "ccdfa37c098842c6dd51bda7d48f43a61d317563df56b6ee5b9da7afb7ac84e2", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "601433586", "expected_species": "Cleome rutidosperma", "split": "train", "observer_id": "5809642", "observation_id": "331543598", "image": "photos/601433586.jpg", "observation_url": "https://www.inaturalist.org/observations/331543598", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/601433586/medium.jpg", "photo_license": "cc-by", "attribution": "(c) sucker69420, some rights reserved (CC BY)", "width": 500, "height": 333, "sha256": "d21afa73aa48f14a866d4b8590ea7a0c2483b4fe4bc9ab5a58171413b2b4bc51", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "393174347", "expected_species": "Cleome rutidosperma", "split": "train", "observer_id": "7164160", "observation_id": "221984580", "image": "photos/393174347.jpg", "observation_url": "https://www.inaturalist.org/observations/221984580", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/393174347/medium.jpeg", "photo_license": "cc-by", "attribution": "(c) \u9673\u5f65\u6770, some rights reserved (CC BY)", "width": 500, "height": 375, "sha256": "62c06c5ce2d5ba854261ded37cccc2ea8366faf51d4794af5629a3698b010b5d", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "474456468", "expected_species": "Ficus microcarpa", "split": "train", "observer_id": "5880267", "observation_id": "264045381", "image": "photos/474456468.jpg", "observation_url": "https://www.inaturalist.org/observations/264045381", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/474456468/medium.jpeg", "photo_license": "cc0", "attribution": "no rights reserved", "width": 500, "height": 376, "sha256": "19f00f2e58c325d86701d11b339d8bf89b9f29a610f3dcd85f3048bb5d9fcdf6", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "644666412", "expected_species": "Ficus microcarpa", "split": "train", "observer_id": "890554", "observation_id": "353294998", "image": "photos/644666412.jpg", "observation_url": "https://www.inaturalist.org/observations/353294998", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/644666412/medium.jpg", "photo_license": "cc-by", "attribution": "(c) Ong Jyh Seng, some rights reserved (CC BY)", "width": 500, "height": 375, "sha256": "4a1df3015de994da65e3f5adb3288688753cf355b7cf185dacddc9e0ccd5f676", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "591901785", "expected_species": "Ficus microcarpa", "split": "train", "observer_id": "5473583", "observation_id": "326780108", "image": "photos/591901785.jpg", "observation_url": "https://www.inaturalist.org/observations/326780108", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/591901785/medium.jpg", "photo_license": "cc-by", "attribution": "(c) \u5cb8\u672c\u5e74\u90ce, some rights reserved (CC BY)", "width": 375, "height": 500, "sha256": "d16053dfcd604aaf4f31fc01e653a63cf18d19b15266ad39bc445e5c2a7a6a97", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "460075842", "expected_species": "Ficus microcarpa", "split": "train", "observer_id": "1026719", "observation_id": "256581551", "image": "photos/460075842.jpg", "observation_url": "https://www.inaturalist.org/observations/256581551", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/460075842/medium.jpg", "photo_license": "cc-by", "attribution": "(c) Zheng-An Wang, some rights reserved (CC BY)", "width": 500, "height": 375, "sha256": "4f36b0cf66e7aabe6173a84fb68cfb1413da2418872f6c9ebf09fd3fd99b07e3", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "624927410", "expected_species": "Ficus microcarpa", "split": "train", "observer_id": "852868", "observation_id": "343104568", "image": "photos/624927410.jpg", "observation_url": "https://www.inaturalist.org/observations/343104568", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/624927410/medium.jpg", "photo_license": "cc-by", "attribution": "(c) Utain Pummarin, some rights reserved (CC BY)", "width": 417, "height": 500, "sha256": "9fe1005eb50b79d0eb6a6cb5465a68b9ede11f1248a8fddaf6dd8086b42b0105", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "362557926", "expected_species": "Ficus microcarpa", "split": "train", "observer_id": "2263809", "observation_id": "205075375", "image": "photos/362557926.jpg", "observation_url": "https://www.inaturalist.org/observations/205075375", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/362557926/medium.jpg", "photo_license": "cc-by", "attribution": "(c) \u8b1d\u9e97\u9726, some rights reserved (CC BY)", "width": 500, "height": 375, "sha256": "bc1972f5e0b75b707241a4ae1fcc78b4ae68ee101a4cba23d028d81df3fb3276", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "274063979", "expected_species": "Ficus microcarpa", "split": "train", "observer_id": "5759919", "observation_id": "158591049", "image": "photos/274063979.jpg", "observation_url": "https://www.inaturalist.org/observations/158591049", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/274063979/medium.jpeg", "photo_license": "cc-by", "attribution": "(c) \u6797\u6b63\u6587, some rights reserved (CC BY)", "width": 375, "height": 500, "sha256": "631c4ad5590c51507709d8f37012c360c35a1705fccdddc0603dfcaf9d8f75ce", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "335102893", "expected_species": "Ficus microcarpa", "split": "train", "observer_id": "24158", "observation_id": "191070905", "image": "photos/335102893.jpg", "observation_url": "https://www.inaturalist.org/observations/191070905", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/335102893/medium.jpg", "photo_license": "cc-by-sa", "attribution": "(c) Dinesh Valke, some rights reserved (CC BY-SA)", "width": 500, "height": 333, "sha256": "a2d192dbe3ace94a433ec8191d8dbd673455df399aabca742cc1e0e870842ae7", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "513919362", "expected_species": "Mimosa pudica", "split": "train", "observer_id": "3377371", "observation_id": "285899346", "image": "photos/513919362.jpg", "observation_url": "https://www.inaturalist.org/observations/285899346", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/513919362/medium.jpg", "photo_license": "cc-by", "attribution": "(c) Navaneeth Sini George, some rights reserved (CC BY)", "width": 500, "height": 375, "sha256": "b4611a17bcc89a348af1792e66519c497a95ed3b4b6f84d23bfae5c490d184aa", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "606538948", "expected_species": "Mimosa pudica", "split": "train", "observer_id": "5880267", "observation_id": "334044611", "image": "photos/606538948.jpg", "observation_url": "https://www.inaturalist.org/observations/334044611", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/606538948/medium.jpg", "photo_license": "cc0", "attribution": "no rights reserved", "width": 500, "height": 376, "sha256": "5d592265d4637702cc0a49961478a77430b7c645f105e46432cef630e5bed84b", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "600929651", "expected_species": "Leucaena leucocephala", "split": "train", "observer_id": "2850982", "observation_id": "331276828", "image": "photos/600929651.jpg", "observation_url": "https://www.inaturalist.org/observations/331276828", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/600929651/medium.jpg", "photo_license": "cc-by", "attribution": "(c) Tom Field, some rights reserved (CC BY)", "width": 376, "height": 500, "sha256": "8d46e17375a3a3619a8cad19c75ccf89345807587032aafbcd592a435ddaaed2", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "656445272", "expected_species": "Leucaena leucocephala", "split": "train", "observer_id": "5880267", "observation_id": "359770853", "image": "photos/656445272.jpg", "observation_url": "https://www.inaturalist.org/observations/359770853", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/656445272/medium.jpg", "photo_license": "cc0", "attribution": "no rights reserved", "width": 500, "height": 376, "sha256": "ed3ef21292951e1f7385f70a3e134dcb83143d6f378c123661a607d8ec128897", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "606988864", "expected_species": "Psidium guajava", "split": "train", "observer_id": "3318377", "observation_id": "334266724", "image": "photos/606988864.jpg", "observation_url": "https://www.inaturalist.org/observations/334266724", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/606988864/medium.jpg", "photo_license": "cc0", "attribution": "no rights reserved", "width": 376, "height": 500, "sha256": "640e2815ece77a2eb31150c4328eb4d9eae99c7c2ec362ea42b8c107f09b3c98", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "462145889", "expected_species": "Psidium guajava", "split": "train", "observer_id": "8753562", "observation_id": "257604010", "image": "photos/462145889.jpg", "observation_url": "https://www.inaturalist.org/observations/257604010", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/462145889/medium.jpeg", "photo_license": "cc0", "attribution": "no rights reserved", "width": 500, "height": 375, "sha256": "a7984d0d3021d5e796d9faa2fd0111643053b2fd63ff9860755471a1d0386bb9", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "595717877", "expected_species": "Commelina diffusa", "split": "train", "observer_id": "8372098", "observation_id": "328715669", "image": "photos/595717877.jpg", "observation_url": "https://www.inaturalist.org/observations/328715669", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/595717877/medium.jpg", "photo_license": "cc-by", "attribution": "(c) James Hardee, some rights reserved (CC BY)", "width": 375, "height": 500, "sha256": "7de421df5ff36324199bd9bc3c5e47267db1c93f0b01eb01f6946254f9a63d60", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "457385213", "expected_species": "Commelina diffusa", "split": "train", "observer_id": "434305", "observation_id": "255248440", "image": "photos/457385213.jpg", "observation_url": "https://www.inaturalist.org/observations/255248440", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/457385213/medium.jpg", "photo_license": "cc-by", "attribution": "(c) Alex Abair, some rights reserved (CC BY)", "width": 375, "height": 500, "sha256": "75719fba18c8d149dc3a730cefaf8d8dbee0222abea80b4cf5b98dc57e5551a0", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "590480464", "expected_species": "Imperata cylindrica", "split": "train", "observer_id": "2895494", "observation_id": "326069175", "image": "photos/590480464.jpg", "observation_url": "https://www.inaturalist.org/observations/326069175", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/590480464/medium.jpg", "photo_license": "cc0", "attribution": "no rights reserved", "width": 375, "height": 500, "sha256": "4d01f01d4794e9c59e93301fcb1381ddf0ee756752a35e0b5ef3de7ef2e3a7d6", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "662042158", "expected_species": "Imperata cylindrica", "split": "train", "observer_id": "5473583", "observation_id": "362716481", "image": "photos/662042158.jpg", "observation_url": "https://www.inaturalist.org/observations/362716481", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/662042158/medium.jpg", "photo_license": "cc-by", "attribution": "(c) \u5cb8\u672c\u5e74\u90ce, some rights reserved (CC BY)", "width": 375, "height": 500, "sha256": "d10a02c281b0002d1c0b131d679bcdcd45c2b4c611f412a3c06242c293eb4050", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "601117098", "expected_species": "Muntingia calabura", "split": "train", "observer_id": "8934441", "observation_id": "331368429", "image": "photos/601117098.jpg", "observation_url": "https://www.inaturalist.org/observations/331368429", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/601117098/medium.jpg", "photo_license": "cc-by", "attribution": "(c) Ra\u00fal A. Ruiz M., some rights reserved (CC BY)", "width": 500, "height": 281, "sha256": "7b2d6e03e03a24580c868f717cd9292633257b665a309d99b67cce3d3b314765", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "534179968", "expected_species": "Muntingia calabura", "split": "train", "observer_id": "495142", "observation_id": "296652287", "image": "photos/534179968.jpg", "observation_url": "https://www.inaturalist.org/observations/296652287", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/534179968/medium.jpg", "photo_license": "cc-by", "attribution": "(c) portioid, some rights reserved (CC BY)", "width": 375, "height": 500, "sha256": "77e0424bc813ca578fdb21e9e9cf62e10c6b09af481b33eb24073b6f04598bb4", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "629138352", "expected_species": "Macaranga tanarius", "split": "train", "observer_id": "979410", "observation_id": "345235270", "image": "photos/629138352.jpg", "observation_url": "https://www.inaturalist.org/observations/345235270", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/629138352/medium.jpg", "photo_license": "cc-by", "attribution": "(c) Meng-Chi Hung, some rights reserved (CC BY)", "width": 500, "height": 281, "sha256": "3c0d09c7f45b8b5c8b58929b8e26c1c1446ae0a4f070dadb05849ae658deb29b", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}, {"photo_id": "599467065", "expected_species": "Macaranga tanarius", "split": "train", "observer_id": "2366151", "observation_id": "330568901", "image": "photos/599467065.jpg", "observation_url": "https://www.inaturalist.org/observations/330568901", "source_url": "https://inaturalist-open-data.s3.amazonaws.com/photos/599467065/medium.jpg", "photo_license": "cc-by-sa", "attribution": "(c) James K. Douch, some rights reserved (CC BY-SA)", "width": 500, "height": 500, "sha256": "73387777f58ef2cbbc9191c19bef0159a925f9b8b27fb6b9a258107eb35b45ad", "flags": [], "review_status": "unreviewed", "label_verification": "not_expert_verified"}];
+const STORAGE_KEY = 'bioguard-training-review-batch01-v1';
+const ALLOWED = new Set(['usable','label_needs_checking','unusable','possible_duplicate']);
+const byId = id => document.getElementById(id);
+let decisions = {}, index = 0, storageAvailable = true;
+const reviewedCount = () => Object.values(decisions).filter(value => ALLOWED.has(value.status)).length;
+try {
+  const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  for (const item of DATA) {
+    const value = stored[item.photo_id];
+    if (value && (ALLOWED.has(value.status) || value.status === 'unreviewed')) decisions[item.photo_id] = {
+      status: value.status, notes: typeof value.notes === 'string' ? value.notes : '',
+      reviewed_utc: typeof value.reviewed_utc === 'string' ? value.reviewed_utc : null,
+    };
+  }
+} catch { storageAvailable = false; }
+for (const species of [...new Set(DATA.map(item => item.expected_species))]) {
+  const option = document.createElement('option'); option.value = species; option.textContent = species; byId('speciesFilter').append(option);
+}
+function filtered() {
+  const species = byId('speciesFilter').value, status = byId('statusFilter').value;
+  return DATA.filter(item => (!species || item.expected_species === species) &&
+    (status === 'all' || (status === 'pending' ? !ALLOWED.has(decisions[item.photo_id]?.status) :
+      ALLOWED.has(decisions[item.photo_id]?.status) && decisions[item.photo_id].status !== 'usable')));
+}
+function persist() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(decisions)); storageAvailable = true; }
+  catch { storageAvailable = false; }
+  byId('saveMessage').textContent = storageAvailable ? 'Progress saved in this browser.' : 'Browser saving is unavailable. Export decisions before closing.';
+  byId('progress').textContent = reviewedCount() + ' / ' + DATA.length + ' reviewed';
+}
+function render() {
+  const items = filtered(); index = Math.max(0, Math.min(index, items.length - 1));
+  byId('reviewContent').hidden = !items.length;
+  byId('reviewContent').style.display = items.length ? '' : 'none';
+  byId('empty').hidden = !!items.length;
+  byId('progress').textContent = reviewedCount() + ' / ' + DATA.length + ' reviewed';
+  if (!items.length) return;
+  const item = items[index], decision = decisions[item.photo_id];
+  byId('photo').src = item.image; byId('photo').alt = 'Original dataset photo labelled ' + item.expected_species;
+  byId('species').textContent = item.expected_species;
+  byId('photoId').textContent = 'Photo ' + item.photo_id + ' · training split';
+  byId('dimensions').textContent = item.width && item.height ? item.width + ' × ' + item.height + ' px · original image' : 'Original image';
+  byId('sourceLink').href = item.observation_url;
+  byId('attribution').textContent = 'Licence: ' + item.photo_license.toUpperCase() + ' · Attribution: ' + item.attribution;
+  byId('notes').value = decision?.notes || '';
+  document.querySelectorAll('[data-status]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.status === decision?.status)));
+  byId('flags').hidden = !item.flags.length;
+  byId('flags').textContent = item.flags.length ? 'Automatic review prompts: ' + item.flags.join(', ').replaceAll('_',' ') : '';
+  byId('position').textContent = 'Photo ' + (index + 1) + ' of ' + items.length + ' in this view';
+  byId('previous').disabled = index === 0; byId('next').disabled = index === items.length - 1;
+}
+document.querySelectorAll('[data-status]').forEach(button => button.addEventListener('click', () => {
+  const item = filtered()[index]; if (!item) return;
+  decisions[item.photo_id] = { status: button.dataset.status, notes: byId('notes').value, reviewed_utc: new Date().toISOString() };
+  persist(); render();
+}));
+byId('notes').addEventListener('input', () => {
+  const item = filtered()[index]; if (!item) return;
+  if (!decisions[item.photo_id]) decisions[item.photo_id] = { status: 'unreviewed', notes: '', reviewed_utc: null };
+  decisions[item.photo_id].notes = byId('notes').value;
+  decisions[item.photo_id].reviewed_utc = new Date().toISOString(); persist();
+});
+byId('previous').addEventListener('click', () => { index--; render(); });
+byId('next').addEventListener('click', () => { index++; render(); });
+for (const id of ['speciesFilter','statusFilter']) byId(id).addEventListener('change', () => { index = 0; render(); });
+byId('export').addEventListener('click', () => {
+  const output = {
+    batch: 'training-batch-01', exported_utc: new Date().toISOString(),
+    source_manifest: 'backend/model/split_manifest.jsonl',
+    botanical_labels_expert_verified: false,
+    records: DATA.map(item => ({ photo_id: item.photo_id, expected_species: item.expected_species,
+      split: item.split, sha256: item.sha256, source_url: item.source_url,
+      observation_url: item.observation_url, photo_license: item.photo_license, attribution: item.attribution,
+      review: decisions[item.photo_id] || { status: 'unreviewed', notes: '', reviewed_utc: null },
+      label_verification: 'not_expert_verified' })),
+  };
+  const blob = new Blob([JSON.stringify(output, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob), anchor = document.createElement('a');
+  anchor.href = url; anchor.download = 'bioguard-training-batch-01-decisions.json'; anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+byId('saveMessage').textContent = storageAvailable ? 'Ready for your first review.' : 'Export your progress before closing this page.';
+render();
+</script>
+</body></html>
+

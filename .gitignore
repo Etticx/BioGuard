@@ -4,3 +4,7 @@ backend/__pycache__/
 backend/.pytest_cache/
 backend/tests/__pycache__/
 *.log
+
+colab/verification/
+colab/__pycache__/
+colab/bioguard_comparison_dataset.zip

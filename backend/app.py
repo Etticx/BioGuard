@@ -18,6 +18,8 @@ logger = logging.getLogger("bioguard")
 
 class Identification(BaseModel):
     predicted_species: str
+    common_name: str
+    sdp_listed_invasive: bool
     confidence: float = Field(ge=0, le=1)
     uncertain_identification: bool
     known_class_scope_only: bool
@@ -45,6 +47,8 @@ def create_app(predictor_factory=None):
     def health():
         return {
             "status": "ready",
+            "model_architecture": api.state.predictor.architecture,
+            "review_threshold": api.state.predictor.review_threshold,
             "supported_species_count": len(api.state.predictor.classes),
             "stores_photos": False,
             "stores_results": False,

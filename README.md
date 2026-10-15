@@ -7,11 +7,35 @@ No accounts, database, or saved prediction history.
 
 - **mobile/** — Expo SDK 57 / React Native, React Native Paper, light theme, system fonts.
 - **backend/** — FastAPI and the supplied Keras model, running on the laptop.
-- **bioguard_model_package.zip** — original package, preserved unchanged.
+- **bioguard_comparison_winner.zip** — active EfficientNetV2B0 model package.
+- **bioguard_model_package.zip** — original MobileNetV2 package, preserved unchanged.
 
 The opening splash uses BioGuard's original leaf mark. Camera and gallery actions use
-labelled outline icons. The result shows the species, model confidence, and a low
-confidence message when the package's review threshold (0.62) is not met.
+labelled outline icons. Results show a common name, scientific name, model confidence,
+and invasive status from the package's **SDP species list**. Below the package's
+review threshold (**0.56**), the screen leads with **Not confident**, labels the
+species as a **Possible match**, and makes invasive status conditional on confirmation.
+The threshold is a validation-selected review cue; it does not detect unsupported species.
+
+The selected EfficientNetV2B0 achieved **85.79% accuracy (326/380)** and **0.8551 macro
+F1** on the historical test set. It was selected using validation macro F1 before
+test results were opened. This is not fresh phone/field validation.
+
+The backend launcher checks the ZIP fingerprint on each start and installs a changed
+package, so an existing installation cannot silently keep using the original model.
+`GET /health` reports the running architecture and review threshold. Restart the backend
+after changing the package. Neither source ZIP is modified.
+
+Common names and reference links live in [backend/species_catalog.json](backend/species_catalog.json).
+They were checked against botanical/government references including
+[NParks Flora & Fauna Web](https://www.nparks.gov.sg/florafaunaweb/flora/2/3/2374),
+[Royal Botanic Gardens Victoria](https://hortflora.rbg.vic.gov.au/taxon/ad979e90-5340-11e7-b82b-005056b0018f),
+[IRRI's spreading dayflower factsheet](https://keyserver.lucidcentral.org/key-server/data/08050103-0a0e-4e01-8a03-040d0c020e0a/media/Html/Commelina_diffusa.htm),
+and the [US Fish & Wildlife Service](https://www.fws.gov/species/parasol-leaf-tree-macaranga-tanarius).
+Invasive status comes from the supplied `species_policy.json` (SDP report pages
+157–160), not from a universal worldwide classification. An uncertain match never
+becomes a confirmed invasive identification; comparison species are shown as
+**Not listed as invasive**, rather than a blanket claim about every location.
 
 ## Run on an Android phone
 
@@ -107,7 +131,7 @@ field accuracy.
 
 ## Current verification notes
 
-- TypeScript, lint, all 3 client contract checks, and all 13 API/preprocessing checks pass.
+- TypeScript, lint, client contract checks, and API/preprocessing checks are run for result changes.
 - Expo Doctor passes all 18 checks; Android/iPhone/browser bundles export successfully.
 - The browser gallery, JPEG preparation, loading state, real model response,
   low-confidence message, and reset were exercised end to end.

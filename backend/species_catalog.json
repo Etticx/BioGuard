@@ -1,0 +1,38 @@
+{
+  "Mimosa pudica": {
+    "common_name": "Touch-me-not",
+    "common_name_source": "https://www.nparks.gov.sg/florafaunaweb/flora/2/2/2225"
+  },
+  "Leucaena leucocephala": {
+    "common_name": "Lead tree",
+    "common_name_source": "https://hortflora.rbg.vic.gov.au/taxon/ad979e90-5340-11e7-b82b-005056b0018f"
+  },
+  "Psidium guajava": {
+    "common_name": "Guava",
+    "common_name_source": "https://www.nparks.gov.sg/florafaunaweb/flora/2/3/2374"
+  },
+  "Commelina diffusa": {
+    "common_name": "Spreading dayflower",
+    "common_name_source": "https://keyserver.lucidcentral.org/key-server/data/08050103-0a0e-4e01-8a03-040d0c020e0a/media/Html/Commelina_diffusa.htm"
+  },
+  "Imperata cylindrica": {
+    "common_name": "Cogongrass",
+    "common_name_source": "https://www.invasivespeciesinfo.gov/terrestrial/plants/cogongrass"
+  },
+  "Muntingia calabura": {
+    "common_name": "Malayan cherry",
+    "common_name_source": "https://www.nparks.gov.sg/florafaunaweb/flora/3/0/3036"
+  },
+  "Cleome rutidosperma": {
+    "common_name": "Fringed spider flower",
+    "common_name_source": "https://www.nparks.gov.sg/florafaunaweb/resource/-/media/ffw/general/field-guides/wildflowers-in-singapore-management-in-landscaped-gardens.pdf"
+  },
+  "Ficus microcarpa": {
+    "common_name": "Malayan banyan",
+    "common_name_source": "https://www.nparks.gov.sg/florafaunaweb/flora/2/9/2912"
+  },
+  "Macaranga tanarius": {
+    "common_name": "Parasol leaf tree",
+    "common_name_source": "https://www.fws.gov/species/parasol-leaf-tree-macaranga-tanarius"
+  }
+}

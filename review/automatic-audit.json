@@ -1,0 +1,36 @@
+{
+  "created_utc": "2026-10-15T03:00:59.239482+00:00",
+  "source_dataset": "D:\\SCHOLARSHIPS\\My Items\\Degree Project\\SDHackathon\\data\\bioguard",
+  "source_manifest": "D:\\SCHOLARSHIPS\\My Items\\Degree Project\\BioGuard\\backend\\model\\split_manifest.jsonl",
+  "total_images": 2700,
+  "split_counts": {
+    "validation": 369,
+    "train": 1951,
+    "test": 380
+  },
+  "flag_counts": {},
+  "exact_duplicate_groups": [],
+  "issues": [],
+  "manual_reviews_completed_by_this_script": 0,
+  "botanical_labels_expert_verified_by_this_script": 0,
+  "batch_size": 30,
+  "batch_species_counts": {
+    "Cleome rutidosperma": 8,
+    "Ficus microcarpa": 8,
+    "Mimosa pudica": 2,
+    "Leucaena leucocephala": 2,
+    "Psidium guajava": 2,
+    "Commelina diffusa": 2,
+    "Imperata cylindrica": 2,
+    "Muntingia calabura": 2,
+    "Macaranga tanarius": 2
+  },
+  "notes": [
+    "Flags are review prompts, not automatic exclusion decisions.",
+    "Small-size and aspect-ratio cutoffs are proposed triage rules.",
+    "Exact hashes do not detect every near duplicate.",
+    "This audit does not establish correct species labels.",
+    "The manual batch contains training images only.",
+    "Source photos, labels, splits, model and mobile app are unchanged."
+  ]
+}

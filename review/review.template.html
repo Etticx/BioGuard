@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BioGuard · Photo review</title>
+<style>
+:root{color-scheme:light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1e2822;background:#f7f8f4}
+*{box-sizing:border-box}body{margin:0}button,select,textarea{font:inherit}
+button,a,select{touch-action:manipulation}button{cursor:pointer}
+header{max-width:1100px;margin:auto;padding:28px 24px 20px;display:flex;justify-content:space-between;gap:20px;align-items:center}
+.brand{font-weight:650;font-size:20px;letter-spacing:-.4px}.muted{color:#626b64}.small{font-size:13px;line-height:1.5}
+main{max-width:1100px;margin:auto;padding:0 24px 32px}.heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin:10px 0 22px}
+h1{font-size:26px;font-weight:600;letter-spacing:-.6px;margin:0 0 8px}h2{font-size:22px;font-weight:600;line-height:1.35;margin:6px 0 16px}
+p{line-height:1.5;margin:0}.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+select,button,textarea{border:1px solid #dfe5dc;border-radius:10px;background:#fff;color:#1e2822}
+select{padding:10px 32px 10px 12px;max-width:100%}.button{padding:10px 16px;min-height:44px}.primary{background:#235b42;color:#fff;border-color:#235b42}
+button:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid #8fae99;outline-offset:3px}
+button:disabled{opacity:.45;cursor:default}.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);gap:30px;align-items:start}
+.figure{background:#fff;border:1px solid #dfe5dc;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;height:470px}
+.figure img{max-width:100%;max-height:100%;object-fit:contain}
+.meta{margin-top:12px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}.meta a{color:#235b42}
+.license{font-size:12px;line-height:1.6;color:#626b64;overflow-wrap:anywhere;margin-top:12px}
+.tag{display:inline-block;padding:4px 9px;border-radius:6px;background:#eaf0e7;color:#235b42;font-size:12px;font-weight:600}
+.note{border-left:3px solid #d4dfcf;padding:0 0 0 12px;font-size:14px;color:#626b64;line-height:1.5;margin:12px 0 20px}
+.choices{display:grid;gap:8px;margin:16px 0}.choice{text-align:left;padding:12px 14px;min-height:48px;border-radius:10px;font-size:15px}
+.choice[aria-pressed=true]{background:#eaf0e7;border-color:#235b42;color:#235b42;font-weight:600}
+textarea{display:block;width:100%;min-height:80px;resize:vertical;padding:12px;margin:8px 0 16px;font-size:14px}
+label{font-size:14px}.nav{display:flex;justify-content:space-between;gap:10px;margin-top:16px}.progress{font-variant-numeric:tabular-nums}
+.notice{font-size:14px;color:#785b24;background:#f5efdf;padding:10px 12px;border-radius:8px;margin:12px 0}
+footer{margin-top:26px;padding-top:18px;border-top:1px solid #dfe5dc;display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap}
+#saveMessage{min-height:20px}
+@media(max-width:760px){header{padding-top:20px}.heading{display:block}.heading>p{margin-top:12px}.grid{grid-template-columns:1fr;gap:22px}.figure{height:340px}.toolbar{align-items:stretch}.toolbar select{flex:1}.heading h1{font-size:24px}h2{font-size:21px}}
+</style>
+</head>
+<body>
+<header><div class="brand">BioGuard <span class="muted" style="font-weight:400">/ Photo review</span></div><span class="tag">Training · Batch 01</span></header>
+<main>
+<div class="heading"><div><h1>A closer look at our data.</h1><p class="muted">30 original photos. Review photo quality and flag uncertain labels.</p></div><p id="progress" class="small progress" aria-live="polite"></p></div>
+<div class="toolbar"><label for="speciesFilter" class="small">Species</label><select id="speciesFilter"><option value="">All species</option></select><label for="statusFilter" class="small">Show</label><select id="statusFilter"><option value="all">All photos</option><option value="pending">Unreviewed</option><option value="flagged">Flagged for follow-up</option></select></div>
+<div class="grid" id="reviewContent">
+<section aria-label="Original photo">
+<div class="figure"><img id="photo" alt=""></div>
+<div class="meta small"><span id="dimensions" class="muted"></span><a id="sourceLink" target="_blank" rel="noopener noreferrer">Open iNaturalist observation ↗</a></div>
+<p id="attribution" class="license"></p>
+</section>
+<section aria-label="Review decision">
+<span class="small muted">Dataset label · not independently confirmed</span><h2 id="species"></h2>
+<p id="photoId" class="small muted"></p>
+<div class="note">Check: is the plant clear, large enough, and the main subject? If you cannot confidently assess its species, choose “Label needs checking”.</div>
+<div id="flags" class="notice" hidden></div>
+<div class="choices" id="choices">
+<button class="choice" data-status="usable" aria-pressed="false">Photo looks usable</button>
+<button class="choice" data-status="label_needs_checking" aria-pressed="false">Label needs checking</button>
+<button class="choice" data-status="unusable" aria-pressed="false">Photo unusable</button>
+<button class="choice" data-status="possible_duplicate" aria-pressed="false">Possible duplicate</button>
+</div>
+<label for="notes">Notes <span class="muted">(optional)</span></label>
+<textarea id="notes" placeholder="For example: several plants in frame; target unclear."></textarea>
+<p class="small muted">“Usable” records photo quality only. It does not certify the species label. Source photos and labels remain unchanged.</p>
+<div class="nav"><button class="button" id="previous">Previous</button><button class="button primary" id="next">Next photo →</button></div>
+<p id="position" class="small muted" style="margin-top:12px"></p>
+</section>
+</div>
+<p id="empty" class="muted" hidden>No photos match this filter. Change the filter to continue.</p>
+<footer><div><p class="small" id="saveMessage" aria-live="polite"></p><p class="small muted">Progress is saved in this browser. Export a backup before switching browsers.</p></div><button class="button" id="export">Export review decisions</button></footer>
+</main>
+<script>
+'use strict';
+const DATA = __REVIEW_DATA__;
+const STORAGE_KEY = 'bioguard-training-review-batch01-v1';
+const ALLOWED = new Set(['usable','label_needs_checking','unusable','possible_duplicate']);
+const byId = id => document.getElementById(id);
+let decisions = {}, index = 0, storageAvailable = true;
+const reviewedCount = () => Object.values(decisions).filter(value => ALLOWED.has(value.status)).length;
+try {
+  const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  for (const item of DATA) {
+    const value = stored[item.photo_id];
+    if (value && (ALLOWED.has(value.status) || value.status === 'unreviewed')) decisions[item.photo_id] = {
+      status: value.status, notes: typeof value.notes === 'string' ? value.notes : '',
+      reviewed_utc: typeof value.reviewed_utc === 'string' ? value.reviewed_utc : null,
+    };
+  }
+} catch { storageAvailable = false; }
+for (const species of [...new Set(DATA.map(item => item.expected_species))]) {
+  const option = document.createElement('option'); option.value = species; option.textContent = species; byId('speciesFilter').append(option);
+}
+function filtered() {
+  const species = byId('speciesFilter').value, status = byId('statusFilter').value;
+  return DATA.filter(item => (!species || item.expected_species === species) &&
+    (status === 'all' || (status === 'pending' ? !ALLOWED.has(decisions[item.photo_id]?.status) :
+      ALLOWED.has(decisions[item.photo_id]?.status) && decisions[item.photo_id].status !== 'usable')));
+}
+function persist() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(decisions)); storageAvailable = true; }
+  catch { storageAvailable = false; }
+  byId('saveMessage').textContent = storageAvailable ? 'Progress saved in this browser.' : 'Browser saving is unavailable. Export decisions before closing.';
+  byId('progress').textContent = reviewedCount() + ' / ' + DATA.length + ' reviewed';
+}
+function render() {
+  const items = filtered(); index = Math.max(0, Math.min(index, items.length - 1));
+  byId('reviewContent').hidden = !items.length;
+  byId('reviewContent').style.display = items.length ? '' : 'none';
+  byId('empty').hidden = !!items.length;
+  byId('progress').textContent = reviewedCount() + ' / ' + DATA.length + ' reviewed';
+  if (!items.length) return;
+  const item = items[index], decision = decisions[item.photo_id];
+  byId('photo').src = item.image; byId('photo').alt = 'Original dataset photo labelled ' + item.expected_species;
+  byId('species').textContent = item.expected_species;
+  byId('photoId').textContent = 'Photo ' + item.photo_id + ' · training split';
+  byId('dimensions').textContent = item.width && item.height ? item.width + ' × ' + item.height + ' px · original image' : 'Original image';
+  byId('sourceLink').href = item.observation_url;
+  byId('attribution').textContent = 'Licence: ' + item.photo_license.toUpperCase() + ' · Attribution: ' + item.attribution;
+  byId('notes').value = decision?.notes || '';
+  document.querySelectorAll('[data-status]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.status === decision?.status)));
+  byId('flags').hidden = !item.flags.length;
+  byId('flags').textContent = item.flags.length ? 'Automatic review prompts: ' + item.flags.join(', ').replaceAll('_',' ') : '';
+  byId('position').textContent = 'Photo ' + (index + 1) + ' of ' + items.length + ' in this view';
+  byId('previous').disabled = index === 0; byId('next').disabled = index === items.length - 1;
+}
+document.querySelectorAll('[data-status]').forEach(button => button.addEventListener('click', () => {
+  const item = filtered()[index]; if (!item) return;
+  decisions[item.photo_id] = { status: button.dataset.status, notes: byId('notes').value, reviewed_utc: new Date().toISOString() };
+  persist(); render();
+}));
+byId('notes').addEventListener('input', () => {
+  const item = filtered()[index]; if (!item) return;
+  if (!decisions[item.photo_id]) decisions[item.photo_id] = { status: 'unreviewed', notes: '', reviewed_utc: null };
+  decisions[item.photo_id].notes = byId('notes').value;
+  decisions[item.photo_id].reviewed_utc = new Date().toISOString(); persist();
+});
+byId('previous').addEventListener('click', () => { index--; render(); });
+byId('next').addEventListener('click', () => { index++; render(); });
+for (const id of ['speciesFilter','statusFilter']) byId(id).addEventListener('change', () => { index = 0; render(); });
+byId('export').addEventListener('click', () => {
+  const output = {
+    batch: 'training-batch-01', exported_utc: new Date().toISOString(),
+    source_manifest: 'backend/model/split_manifest.jsonl',
+    botanical_labels_expert_verified: false,
+    records: DATA.map(item => ({ photo_id: item.photo_id, expected_species: item.expected_species,
+      split: item.split, sha256: item.sha256, source_url: item.source_url,
+      observation_url: item.observation_url, photo_license: item.photo_license, attribution: item.attribution,
+      review: decisions[item.photo_id] || { status: 'unreviewed', notes: '', reviewed_utc: null },
+      label_verification: 'not_expert_verified' })),
+  };
+  const blob = new Blob([JSON.stringify(output, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob), anchor = document.createElement('a');
+  anchor.href = url; anchor.download = 'bioguard-training-batch-01-decisions.json'; anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+byId('saveMessage').textContent = storageAvailable ? 'Ready for your first review.' : 'Export your progress before closing this page.';
+render();
+</script>
+</body></html>
+
