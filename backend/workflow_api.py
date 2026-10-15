@@ -124,7 +124,7 @@ def password(details:Password,request:Request):
     user=user_from(request)
     try:request.app.state.records.change_password(user,details.current_password,details.new_password)
     except ValueError as error:raise HTTPException(422,str(error)) from error
-    response=Response(status_code=204);response.delete_cookie("bioguard_session");return response
+    response=Response(status_code=204);response.delete_cookie(request.app.state.cookie_name);return response
 @router.get("/admin/users")
 def users(request:Request):
     user_from(request,"officer");return request.app.state.records.admin_users()

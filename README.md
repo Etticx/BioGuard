@@ -1,4 +1,4 @@
-# BioGuard — identification and reporting prototype
+# BioGuard — private beta preparation
 
 Choose a plant photo, identify it with the supplied model, and see a suggested species.
 Identification stays temporary. Opening a report form after staff sign-in saves a local draft; submitting explicitly stores the report on the server.
@@ -84,7 +84,13 @@ then run `./Start-Preview.ps1` from this folder. It serves http://localhost:8082
 routing fallback. The backend serves the officer dashboard directly; no separate web
 installation is needed.
 
-## Run on an Android phone
+## Private beta on Android and iPhone
+
+Use [PRIVATE_BETA.md](PRIVATE_BETA.md) and `./Start-PrivateBeta.ps1 -Mode Expo`
+for the isolated, staff-only beta. Both phones use Expo Go; sign in with the same Expo
+account on the laptop and iPhone. The launcher uses a separate database and local Wi-Fi.
+
+## Original Android prototype
 
 The dependencies and model have already been prepared on this computer.
 
@@ -105,11 +111,12 @@ on your private network. This project does not change firewall rules.
 
 ## iPhone testing
 
-The app code supports iPhone. Current Expo SDK 57 physical-iPhone testing uses an
-Expo/development build signed with Apple Developer credentials; follow the current
-[Expo iOS setup guide](https://docs.expo.dev/get-started/set-up-your-environment/?platform=ios&device=physical&mode=expo-go).
-A distributable beta can use TestFlight. Camera permissions, the native gallery,
-and the native splash screen must still be checked on real Android and iPhone devices.
+Current App Store Expo Go supports SDK 57. Sign in with the same Expo account on
+this laptop and the iPhone, then open the local development server. See
+[Expo's September 2026 update](https://expo.dev/changelog/expo-go-57-login).
+Apple Developer membership is needed later for signed standalone iOS distribution.
+Camera permissions, gallery, draft persistence and splash behavior still require
+physical Android and iPhone checks.
 
 ## APK / standalone builds
 
@@ -135,6 +142,7 @@ Use Node 24 LTS (or a Node version supported by Expo SDK 57) and Python 3.12.
 ```powershell
 cd backend
 python -m venv .venv
+./.venv/Scripts/python.exe -m pip install --upgrade pip==26.2.1
 ./.venv/Scripts/python.exe -m pip install -r requirements-dev.txt
 ./.venv/Scripts/python.exe setup_model.py
 cd ../mobile
@@ -189,5 +197,9 @@ In-app updates refresh while open; OS push/background delivery remains future wo
 
 Physical Android/iPhone tests, signed builds and HTTPS container deployment remain
 pending. Bundle export does not establish native behavior or field accuracy.
-Original model ZIPs and attribution files are preserved. npm audit reports 29
-upstream findings (11 moderate, 18 high); assess these before public release.
+Original model ZIPs and attribution files are preserved. The October 15 dependency
+check reports zero known Python vulnerabilities after Keras/Pillow/installer updates.
+npm audit reports 18 high findings inherited from braces and node-forge, for which
+no patched package version is published; private testing does not establish public-release readiness.
+The query-string decoder and xcode UUID dependency findings were fixed with explicit
+overrides and a reproducible CommonJS import adjustment. See PRIVATE_BETA.md.

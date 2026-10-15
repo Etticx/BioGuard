@@ -86,7 +86,7 @@ class Review(BaseModel):
 
 def token_from(request):
     authorization = request.headers.get("authorization", "")
-    return authorization[7:] if authorization.startswith("Bearer ") else request.cookies.get("bioguard_session", "")
+    return authorization[7:] if authorization.startswith("Bearer ") else request.cookies.get(request.app.state.cookie_name, "")
 
 
 def user_from(request, role=None):
@@ -124,7 +124,7 @@ async def login(request: Request, details: Login):
         raise HTTPException(401, "Check your username and password. After repeated attempts, wait five minutes.")
     from fastapi.responses import JSONResponse
     response = JSONResponse(result)
-    response.set_cookie("bioguard_session", result["token"], httponly=True, samesite="strict",
+    response.set_cookie(request.app.state.cookie_name, result["token"], httponly=True, samesite="strict",
                         secure=os.environ.get("BIOGUARD_SECURE_COOKIES")=="1" or request.url.scheme == "https", max_age=8 * 3600)
     response.headers["Cache-Control"] = "no-store"
     return response
@@ -134,7 +134,7 @@ async def login(request: Request, details: Login):
 def logout(request: Request):
     request.app.state.records.logout(token_from(request))
     response = Response(status_code=204)
-    response.delete_cookie("bioguard_session")
+    response.delete_cookie(request.app.state.cookie_name)
     return response
 
 

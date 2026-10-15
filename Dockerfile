@@ -1,16 +1,17 @@
 FROM node:24-bookworm-slim AS mobile
 WORKDIR /build/mobile
 COPY mobile/package*.json ./
+COPY mobile/scripts/ ./scripts/
 RUN npm ci
 COPY mobile/ ./
-ENV EXPO_PUBLIC_API_URL=/
+ENV EXPO_PUBLIC_API_URL=/ EXPO_PUBLIC_PRIVATE_BETA=1
 RUN npx expo export --platform web
 
 FROM python:3.12-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 BIOGUARD_DATA_DIR=/data
 WORKDIR /app
 COPY backend/requirements.txt /app/backend/requirements.txt
-RUN pip install --no-cache-dir -r /app/backend/requirements.txt
+RUN python -m pip install --no-cache-dir --upgrade pip==26.2.1 && python -m pip install --no-cache-dir -r /app/backend/requirements.txt
 COPY backend/*.py /app/backend/
 COPY backend/species_catalog.json /app/backend/
 COPY bioguard_comparison_winner.zip /app/

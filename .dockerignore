@@ -15,3 +15,9 @@ training
 
 field-tests
 deploy/.env
+
+mobile/.beta-dist
+beta/device-results.json
+beta/field-results.json
+
+mobile/.beta-check-dist/

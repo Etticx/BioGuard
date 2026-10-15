@@ -1,0 +1,15 @@
+# Separate local beta. No domain, TLS certificate or cloud account is required.
+services:
+  beta:
+    build: .
+    environment:
+      BIOGUARD_PRIVATE_BETA: "1"
+      BIOGUARD_DATA_DIR: /data
+      BIOGUARD_SECURE_COOKIES: "0"
+      BIOGUARD_CORS_ORIGINS: ""
+    ports:
+      - "8001:8000"
+    volumes:
+      - bioguard_private_beta:/data
+volumes:
+  bioguard_private_beta:

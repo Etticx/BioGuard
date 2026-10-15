@@ -3,6 +3,7 @@ services:
     build: .
     restart: unless-stopped
     environment:
+      BIOGUARD_PRIVATE_BETA: "1"
       BIOGUARD_DATA_DIR: /data
       BIOGUARD_SECURE_COOKIES: "1"
       BIOGUARD_CORS_ORIGINS: https://${BIOGUARD_DOMAIN:?Set BIOGUARD_DOMAIN}

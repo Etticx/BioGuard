@@ -44,9 +44,9 @@ Restart, sign in, check counts and open an evidence image. Automated tests resto
 
 ## HTTPS hosting preparation
 
-Dockerfile/compose.yaml prepare one server: phone web app `/`, ecology desk `/officer`, Caddy HTTPS, and persistent reports in a named volume. No hosting has been published. Docker is unavailable in this workspace, so container builds and certificates remain unverified.
+Dockerfile/compose.yaml prepare one server: phone web app `/`, ecology desk `/officer`, Caddy HTTPS, and persistent reports in a named volume. No hosting has been published. Docker is installed here, but its engine fails while opening a Windows runtime socket. Both Compose configurations validate; image builds and certificates remain unverified. Do not reset Docker volumes to bypass this.
 
-On a Docker host, set BIOGUARD_DOMAIN to a domain pointing at that host, then run `docker compose up --build -d`. Ports 80/443 are required for HTTPS. Privately read seed access using `docker compose exec api cat /data/local-accounts.json`; change those passwords before inviting staff. Keep a small controlled staff pilot behind organizational access/network controls: identification is unauthenticated, so this is not an unrestricted public service.
+On a Docker host, set BIOGUARD_DOMAIN to a domain pointing at that host, then run `docker compose up --build -d`. Ports 80/443 are required for HTTPS. Privately read seed access using `docker compose exec api cat /data/local-accounts.json`; change those passwords before inviting staff. Keep a small controlled staff pilot behind organizational access/network controls: the hosting profile enables BIOGUARD_PRIVATE_BETA=1, requiring staff authentication even for identification and a password change for new seed accounts. This is not an unrestricted public service.
 
 Preserve the data volume. Set capacity monitoring, access/retention policies and off-host encrypted backups. Assess remaining dependency-audit findings before public release. Original model packages and report model provenance are preserved.
 
@@ -60,7 +60,7 @@ npx eas-cli@latest build --platform android --profile preview
 npx eas-cli@latest build --platform ios --profile preview
 ```
 
-No APK, iOS signature or store submission has been created. Bundle export is not a physical-device test. For the development-client profile, install matching `expo-dev-client` using `npx expo install expo-dev-client` first.
+No APK, iOS signature or store submission has been created. Bundle export is not a physical-device test. The matching expo-dev-client dependency is installed. Expo Go is selected explicitly by the local launchers. Expo Go on iPhone uses the same signed-in Expo account as the laptop; paid Apple signing is only needed for standalone distribution.
 
 ## Real-device checklist — NOT RUN
 
@@ -93,10 +93,17 @@ The tool rejects exact duplicate/training-folder images and reports known accura
 
 ## Local verification for version 0.2
 
-- Sixty backend checks cover workflow, privacy, accounts, restoration, startup failure and Malaysia date boundaries.
-- Twelve client checks cover contracts, uncertainty, lost acknowledgements, account ownership and stopped retries after conflicts.
+- Sixty-five backend checks cover workflow, privacy, accounts, restoration, startup failure and Malaysia date boundaries.
+- Sixteen client checks cover contracts, uncertainty, lost acknowledgements, account ownership and stopped retries after conflicts.
 - Mobile typecheck and lint pass; Android, iPhone and browser bundles export.
 - Browser demo BG-25BED477: visit revision/start, evidence photo upload, durable draft across reload/sign-in, officer verification and separate next planting visit were exercised. The software-only evidence is clearly labelled and is not a biological validation.
 - Staff-management screens and live backup creation were checked. The other user-submitted sighting was left unchanged.
 - Backend calendar rules use Malaysia time (UTC+8), including on a UTC hosting computer. Timestamps remain UTC and display in the viewer's local time.
 - The field-evaluation tool, Docker deployment and physical camera/gallery behavior still require their respective real data/host/devices; no result is claimed for them.
+
+## Isolated private beta
+
+Follow [PRIVATE_BETA.md](PRIVATE_BETA.md). Start-PrivateBeta.ps1 uses API port 8001,
+Expo port 8383 and backend/data/private-beta; original data remains separate.
+Current status is preparation plus local testing, with physical-device, fresh field,
+off-host backup and signed-distribution acceptance still pending.

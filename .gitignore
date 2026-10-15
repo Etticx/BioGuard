@@ -16,3 +16,9 @@ field-tests/photos/
 field-tests/manifest.json
 field-tests/results.json
 deploy/.env
+
+mobile/.beta-dist/
+beta/device-results.json
+beta/field-results.json
+
+mobile/.beta-check-dist/

@@ -6,6 +6,6 @@ $bioNode = if (Test-Path -LiteralPath $bioBundledNode) { $bioBundledNode } else 
 Push-Location -LiteralPath $bioMobile
 try {
     Write-Host 'Use the same Wi-Fi on the phone and laptop. Open the QR code with Expo Go.'
-    & $bioNode '.\node_modules\expo\bin\cli' start --offline
+    & $bioNode '.\node_modules\expo\bin\cli' start --go --offline
 } finally { Pop-Location }
 

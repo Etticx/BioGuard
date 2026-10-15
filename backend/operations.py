@@ -25,7 +25,7 @@ TERMINAL = {"verified", "cancelled"}
 
 
 class OperationsMixin:
-    def initialize(self, seed=True):
+    def initialize(self, seed=True, temporary_seed=False):
         super().initialize(False)
         with self.connect() as db:
             db.executescript("""
@@ -63,7 +63,7 @@ class OperationsMixin:
             accounts=[]
             for username,display,role in (("grounds","Ground team","ground"),("ecology","Ecology officer","officer")):
                 password=secrets.token_urlsafe(15)
-                self.add_user(username,password,display,role)
+                self.add_user(username,password,display,role,must_change=temporary_seed)
                 accounts.append({"username":username,"password":password,"display_name":display,"role":role})
             (self.directory/"local-accounts.json").write_text(json.dumps(accounts,indent=2),"utf-8")
 

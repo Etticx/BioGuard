@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "release": "0.2.0-private-beta",
+  "records": [
+    {
+      "platform": "android",
+      "device": "",
+      "os_version": "",
+      "tested_at": "",
+      "tester": "",
+      "checks": [
+        {
+          "id": "launch_camera_gallery_permissions",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "large_rotated_photo_identification",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "uncertain_unsupported_nonplant",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "report_received_with_photos",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "visit_evidence_officer_followup",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "draft_survives_force_close",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "interrupted_upload_one_receipt",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "account_separation_expiry",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "small_screen_accessibility",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "backup_restore_separate_directory",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        }
+      ]
+    },
+    {
+      "platform": "ios",
+      "device": "",
+      "os_version": "",
+      "tested_at": "",
+      "tester": "",
+      "checks": [
+        {
+          "id": "launch_camera_gallery_permissions",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "large_rotated_photo_identification",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "uncertain_unsupported_nonplant",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "report_received_with_photos",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "visit_evidence_officer_followup",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "draft_survives_force_close",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "interrupted_upload_one_receipt",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "account_separation_expiry",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "small_screen_accessibility",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        },
+        {
+          "id": "backup_restore_separate_directory",
+          "status": "not_run",
+          "expected": "",
+          "observed": "",
+          "issue": ""
+        }
+      ]
+    }
+  ]
+}

@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from records import Records
-from reporting import router as reporting_router
+from reporting import router as reporting_router, user_from
 from workflow_api import router as workflow_router
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
@@ -41,13 +41,14 @@ def load_model():
     return BioGuardPredictor(MODEL_DIR)
 
 
-def create_app(predictor_factory=None, data_dir=None, seed_accounts=True):
+def create_app(predictor_factory=None, data_dir=None, seed_accounts=True, private_beta=None):
+    private_beta = os.environ.get("BIOGUARD_PRIVATE_BETA")=="1" if private_beta is None else private_beta
     factory = predictor_factory or load_model
 
     @asynccontextmanager
     async def lifespan(api):
         api.state.records = Records(data_dir or Path(os.environ.get("BIOGUARD_DATA_DIR",str(Path(__file__).parent / "data"))))
-        await run_in_threadpool(api.state.records.initialize, seed_accounts)
+        await run_in_threadpool(api.state.records.initialize, seed_accounts, private_beta)
         api.state.inference_lock = asyncio.Lock()
         try:api.state.predictor = await run_in_threadpool(factory)
         except Exception:
@@ -70,7 +71,10 @@ def create_app(predictor_factory=None, data_dir=None, seed_accounts=True):
                 with suppress(asyncio.CancelledError):await task
             api.state.predictor=None
 
-    api = FastAPI(title="BioGuard", version="0.2.0", lifespan=lifespan)
+    api = FastAPI(title="BioGuard", version="0.2.0", lifespan=lifespan,
+                  docs_url=None if private_beta else "/docs",redoc_url=None if private_beta else "/redoc",openapi_url=None if private_beta else "/openapi.json")
+    api.state.private_beta=private_beta
+    api.state.cookie_name="bioguard_beta_session" if private_beta else "bioguard_session"
     # LAN-only development; permits the Expo browser preview.
     api.add_middleware(
         CORSMiddleware, allow_origins=os.environ.get("BIOGUARD_CORS_ORIGINS","*").split(","), allow_methods=["GET", "POST"],
@@ -82,7 +86,7 @@ def create_app(predictor_factory=None, data_dir=None, seed_accounts=True):
         if request.method == "POST":
             origin=request.headers.get("origin")
             # Browser cookie writes must come from this origin. Native bearer requests do not use cookies.
-            if request.cookies.get("bioguard_session") and not request.headers.get("authorization") and origin:
+            if request.cookies.get(api.state.cookie_name) and not request.headers.get("authorization") and origin:
                 from urllib.parse import urlsplit
                 if urlsplit(origin).netloc != request.headers.get("host"):
                     return JSONResponse({"detail":"Use the BioGuard page for this action."},status_code=403)
@@ -96,6 +100,9 @@ def create_app(predictor_factory=None, data_dir=None, seed_accounts=True):
         response = await call_next(request)
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Referrer-Policy"]="no-referrer"
+        response.headers["X-Frame-Options"]="DENY"
+        response.headers["Content-Security-Policy"]="frame-ancestors 'none'"
         return response
 
     api.include_router(reporting_router)
@@ -114,10 +121,12 @@ def create_app(predictor_factory=None, data_dir=None, seed_accounts=True):
             "stores_identification_results": False,
             "stores_submitted_reports": True,
             "report_storage": "only explicitly submitted reports",
+            **({"private_beta":True} if private_beta else {}),
         }
 
     @api.post("/identify", response_model=Identification)
     async def identify(request: Request):
+        if private_beta:user_from(request)
         if api.state.predictor is None:
             raise HTTPException(503,"Identification is unavailable. You can still send a sighting report for officer review.")
         content_type = request.headers.get("content-type", "").split(";")[0].lower()
@@ -140,6 +149,8 @@ def create_app(predictor_factory=None, data_dir=None, seed_accounts=True):
             content.extend(chunk)
         if not content:
             raise HTTPException(400, "Choose a photo first.")
+        if api.state.inference_lock.locked():
+            raise HTTPException(429,"Identification is busy. Please try again shortly.")
         async with api.state.inference_lock:
             try:
                 return await run_in_threadpool(api.state.predictor.predict, bytes(content))
@@ -149,7 +160,7 @@ def create_app(predictor_factory=None, data_dir=None, seed_accounts=True):
                 logger.exception("Model inference failed")
                 raise HTTPException(500, "Could not identify this photo. Please try again.") from None
 
-    mobile_dist=Path(__file__).parent.parent/"mobile"/"dist"
+    mobile_dist=Path(os.environ.get("BIOGUARD_WEB_DIR",str(Path(__file__).parent.parent/"mobile"/"dist")))
     if mobile_dist.is_dir():
         from fastapi.responses import FileResponse
         @api.get("/",include_in_schema=False)
@@ -160,6 +171,10 @@ def create_app(predictor_factory=None, data_dir=None, seed_accounts=True):
         def mobile_page():return FileResponse(mobile_dist/"index.html")
         if (mobile_dist/"_expo").is_dir():api.mount("/_expo",StaticFiles(directory=mobile_dist/"_expo"),name="expo-assets")
         if (mobile_dist/"assets").is_dir():api.mount("/assets",StaticFiles(directory=mobile_dist/"assets"),name="mobile-assets")
+    @api.get("/beta-information",include_in_schema=False)
+    def beta_information():
+        from fastapi.responses import FileResponse
+        return FileResponse(Path(__file__).parent.parent/"web"/"beta-information.html")
     return api
 
 
