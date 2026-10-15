@@ -1,12 +1,13 @@
-# BioGuard — first working prototype
+# BioGuard — identification and reporting prototype
 
 Choose a plant photo, identify it with the supplied model, and see a suggested species.
-No accounts, database, or saved prediction history.
+Identification stays temporary. Photos and results are saved only when a ground-team member explicitly submits a report.
 
 ## Project
 
 - **mobile/** — Expo SDK 57 / React Native, React Native Paper, light theme, system fonts.
-- **backend/** — FastAPI and the supplied Keras model, running on the laptop.
+- **backend/** — FastAPI, the Keras model, protected local report storage and role accounts.
+- **web/** — local ecology-officer inbox and review dashboard.
 - **bioguard_comparison_winner.zip** — active EfficientNetV2B0 model package.
 - **bioguard_model_package.zip** — original MobileNetV2 package, preserved unchanged.
 
@@ -36,6 +37,46 @@ Invasive status comes from the supplied `species_policy.json` (SDP report pages
 157–160), not from a universal worldwide classification. An uncertain match never
 becomes a confirmed invasive identification; comparison species are shown as
 **Not listed as invasive**, rather than a blanket claim about every location.
+
+
+## Ground team and ecology officer
+
+The workflow has two roles:
+
+1. **Ground team:** identify a plant, tap **Report sighting**, sign in, and add the
+   site/block, nearby landmark, amount seen, observation date and optional note/overview photo.
+2. **Ecology officer:** open **http://127.0.0.1:8000/officer**, review the evidence,
+   confirm/correct the species, request more information, close without action, or
+   approve removal and replanting and assign a ground team.
+3. **Ground team:** open **Team reports** in the app to see review requests and
+   approved removal, replacement-species and replanting instructions. Requested
+   additional photos can be submitted back to the same report.
+
+The officer chooses a replacement species appropriate to the site. The model never
+chooses replacement plants or authorizes removal. Officer confirmation is stored
+separately from the original model suggestion, confidence and model fingerprint.
+
+On the first backend start, two local accounts (`grounds` and `ecology`) receive
+random passwords. Their details are written to **backend/data/local-accounts.json**
+on this computer. Open that ignored local file to sign in; do not commit or share it.
+Sessions expire after eight hours. The app keeps its session in memory and asks for
+sign-in again after a restart; the officer dashboard uses an HTTP-only session cookie.
+
+Submitted reports and protected photo evidence persist in **backend/data/bioguard.sqlite3**.
+The whole data directory is ignored by Git. Only the ecology officer and the reporting
+or assigned team can read a report and its photos. All review changes retain an activity
+history; stale reviews are rejected. A retry of the same submission does not create a
+second report. The server computes saved predictions instead of accepting a client claim.
+
+Keep this prototype on the local network. Hosted use needs HTTPS and proper account
+administration and backups. No website has been published. Completion evidence,
+post-work verification and follow-up/regrowth visits are the next workflow milestone;
+an assigned report does not claim that removal or replanting has been completed.
+
+For a browser preview, export the app from `mobile/` with `npx expo export --platform web`,
+then run `./Start-Preview.ps1` from this folder. It serves http://localhost:8082/ with
+routing fallback. The backend serves the officer dashboard directly; no separate web
+installation is needed.
 
 ## Run on an Android phone
 
@@ -120,8 +161,8 @@ The phone converts the selected image to JPEG (95% quality), limiting its longes
 edge to 2048 pixels without cropping, for upload compatibility. Only temporary
 cache copies are created. The app deletes its copies when you change the photo,
 start again, or close the screen normally; the OS may retain cache after a crash.
-Original gallery photos are not deleted. The server handles uploads entirely in
-memory and does not save photos or predictions. The local Wi-Fi demo uses HTTP;
+Original gallery photos are not deleted. The identification endpoint handles uploads in memory and does not save them.
+Submitting a report explicitly saves its photos, location, model suggestion and review history. The local Wi-Fi demo uses HTTP;
 use HTTPS when hosting or distributing the app.
 
 The full extracted model package is preserved under `backend/model/`, including
@@ -131,8 +172,12 @@ field accuracy.
 
 ## Current verification notes
 
-- TypeScript, lint, client contract checks, and API/preprocessing checks are run for result changes.
+- TypeScript, lint, 7 client contract checks and 43 backend checks pass for reporting.
+- Android, iPhone and browser bundles export successfully. Real-device testing remains pending.
 - Expo Doctor passes all 18 checks; Android/iPhone/browser bundles export successfully.
+- The live browser report flow was verified: ground sign-in, real model identification,
+  submission receipt, officer inbox/review, approved assignment and team instructions.
+  One clearly labelled demo report is retained for trying the interface.
 - The browser gallery, JPEG preparation, loading state, real model response,
   low-confidence message, and reset were exercised end to end.
 - Pixel preprocessing matches the original package exactly on the packaged evaluation figure.

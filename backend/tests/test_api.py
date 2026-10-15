@@ -36,8 +36,8 @@ class Predictor:
 
 
 @pytest.fixture
-def client():
-    with TestClient(create_app(Predictor)) as api:
+def client(tmp_path):
+    with TestClient(create_app(Predictor, data_dir=tmp_path, seed_accounts=False)) as api:
         yield api
 
 
@@ -45,7 +45,8 @@ def test_health_states_no_storage(client):
     assert client.get("/health").json() == {
         "status": "ready", "model_architecture": "EfficientNetV2B0",
         "review_threshold": 0.56, "supported_species_count": 9,
-        "stores_photos": False, "stores_results": False,
+        "stores_identification_photos": False, "stores_identification_results": False,
+        "stores_submitted_reports": True, "report_storage": "only explicitly submitted reports",
     }
 
 
@@ -118,11 +119,11 @@ def test_corrupt_image_is_rejected():
         prepare_image(b"invalid")
 
 
-def test_model_exception_returns_a_readable_error():
+def test_model_exception_returns_a_readable_error(tmp_path):
     class Broken(Predictor):
         def predict(self, content):
             raise RuntimeError("internal details")
-    with TestClient(create_app(Broken)) as api:
+    with TestClient(create_app(Broken, data_dir=tmp_path, seed_accounts=False)) as api:
         response = api.post("/identify", content=photo_bytes(),
                             headers={"Content-Type": "image/png"})
     assert response.status_code == 500

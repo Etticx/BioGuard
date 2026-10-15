@@ -1,4 +1,4 @@
-"""Local prototype API. Photos and predictions are never written to disk."""
+"""Local identification plus explicitly submitted, private sighting reports."""
 import asyncio
 from contextlib import asynccontextmanager
 import logging
@@ -6,6 +6,11 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+from records import Records
+from reporting import router as reporting_router
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
@@ -26,13 +31,15 @@ class Identification(BaseModel):
     supported_species_count: int
 
 
-def create_app(predictor_factory=None):
+def create_app(predictor_factory=None, data_dir=None, seed_accounts=True):
     factory = predictor_factory or (lambda: BioGuardPredictor(MODEL_DIR))
 
     @asynccontextmanager
     async def lifespan(api):
         api.state.predictor = await run_in_threadpool(factory)
         api.state.inference_lock = asyncio.Lock()
+        api.state.records = Records(data_dir or Path(__file__).parent / "data")
+        await run_in_threadpool(api.state.records.initialize, seed_accounts)
         yield
         api.state.predictor = None
 
@@ -40,8 +47,26 @@ def create_app(predictor_factory=None):
     # LAN-only development; permits the Expo browser preview.
     api.add_middleware(
         CORSMiddleware, allow_origins=["*"], allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "Accept"], allow_credentials=False,
+        allow_headers=["Content-Type", "Accept", "Authorization"], allow_credentials=False,
     )
+
+    @api.middleware("http")
+    async def limit_and_private(request, call_next):
+        if request.method == "POST":
+            # Bound the complete request, including both report photos and multipart overhead.
+            body = bytearray()
+            async for chunk in request.stream():
+                if len(body) + len(chunk) > 25 * 1024 * 1024:
+                    return JSONResponse({"detail": "Upload is too large."}, status_code=413)
+                body.extend(chunk)
+            request._body = bytes(body)
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
+
+    api.include_router(reporting_router)
+    api.mount("/officer-assets", StaticFiles(directory=Path(__file__).parent.parent / "web"), name="officer-assets")
 
     @api.get("/health")
     def health():
@@ -50,8 +75,10 @@ def create_app(predictor_factory=None):
             "model_architecture": api.state.predictor.architecture,
             "review_threshold": api.state.predictor.review_threshold,
             "supported_species_count": len(api.state.predictor.classes),
-            "stores_photos": False,
-            "stores_results": False,
+            "stores_identification_photos": False,
+            "stores_identification_results": False,
+            "stores_submitted_reports": True,
+            "report_storage": "only explicitly submitted reports",
         }
 
     @api.post("/identify", response_model=Identification)

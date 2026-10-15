@@ -8,3 +8,5 @@ backend/tests/__pycache__/
 colab/verification/
 colab/__pycache__/
 colab/bioguard_comparison_dataset.zip
+
+backend/data/

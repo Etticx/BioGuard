@@ -1,6 +1,7 @@
 """In-memory inference with the model package's exact preprocessing."""
 from io import BytesIO
 import json
+from hashlib import sha256
 from pathlib import Path
 import warnings
 
@@ -52,6 +53,7 @@ class BioGuardPredictor:
                 raise ValueError(f"Missing SDP invasive status for {species}.")
         self.architecture = self.config.get("architecture", "MobileNetV2")
         self.review_threshold = self.selection["review_threshold"]
+        self.model_sha256 = sha256((package_dir / "bioguard.keras").read_bytes()).hexdigest()
         self.model = tf.keras.models.load_model(package_dir / "bioguard.keras", compile=False)
         if len(self.classes) != self.model.output_shape[-1]:
             raise ValueError("Model output and species labels do not match.")
