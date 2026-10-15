@@ -1,0 +1,30 @@
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      BIOGUARD_DATA_DIR: /data
+      BIOGUARD_SECURE_COOKIES: "1"
+      BIOGUARD_CORS_ORIGINS: https://${BIOGUARD_DOMAIN:?Set BIOGUARD_DOMAIN}
+    volumes:
+      - bioguard_data:/data
+    expose:
+      - "8000"
+  https:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      BIOGUARD_DOMAIN: ${BIOGUARD_DOMAIN:?Set BIOGUARD_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+volumes:
+  bioguard_data:
+  caddy_data:
+  caddy_config:

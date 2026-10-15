@@ -11,7 +11,7 @@ class Preview(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         route = urlsplit(self.path).path
-        if route in {"/report", "/team"}:
+        if route in {"/report", "/team", "/drafts", "/updates"}:
             self.path = "/index.html"
         super().do_GET()
 

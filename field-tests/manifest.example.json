@@ -1,0 +1,13 @@
+{
+  "purpose": "Fresh field evaluation; duplicate this file and replace the example",
+  "cases": [
+    {
+      "path": "photos/example.jpg",
+      "reviewed_label": "Mimosa pudica",
+      "reviewed_by": "REPLACE_WITH_ECOLOGY_REVIEWER",
+      "capture_date": "YYYY-MM-DD",
+      "site": "REPLACE_WITH_TEST_SITE",
+      "source_id": "REPLACE_WITH_UNIQUE_CAPTURE_ID"
+    }
+  ]
+}

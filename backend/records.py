@@ -23,7 +23,7 @@ class RecordConflict(ValueError):
     pass
 
 
-class Records:
+class BaseRecords:
     def __init__(self, directory: Path):
         self.directory = Path(directory)
         self.database = self.directory / "bioguard.sqlite3"
@@ -133,17 +133,17 @@ class Records:
             data = {**details, "prediction": prediction, "model": provenance,
                     "reporter_name": user["display_name"], "review": None,
                     "history": [{"at": timestamp, "action": "submitted", "by": user["display_name"]}]}
-            db.execute("INSERT INTO reports VALUES (?,?,?,?,?,?,?,?,?,?)",
+            db.execute("INSERT INTO reports(id,reporter_id,assigned_team_id,status,revision,request_key,digest,created_at,updated_at,data) VALUES (?,?,?,?,?,?,?,?,?,?)",
                        (identifier, user["id"], None, "submitted", 1, request_key, digest,
                         timestamp, timestamp, json.dumps(data)))
             for kind, mime, content in photos:
-                db.execute("INSERT INTO photos VALUES (?,?,?,?,?)", (uuid4().hex, identifier, kind, mime, content))
+                db.execute("INSERT INTO photos(id,report_id,kind,mime,content) VALUES (?,?,?,?,?)", (uuid4().hex, identifier, kind, mime, content))
         return self.get_report(identifier, user)
 
     def get_report(self, identifier, user):
         with self.connect() as db:
             row = db.execute("SELECT * FROM reports WHERE id=?", (identifier,)).fetchone()
-            if row is None or (user["role"] != "officer" and user["id"] not in (row["reporter_id"], row["assigned_team_id"])):
+            if row is None or not self.can_access(row, user):
                 return None
             data = json.loads(row["data"])
             data.update({key: row[key] for key in ("id", "status", "revision", "created_at", "updated_at", "reporter_id", "assigned_team_id")})
@@ -199,7 +199,14 @@ class Records:
                 raise RecordConflict("This report has changed. Refresh it before adding information.")
             timestamp, data = now(), json.loads(row["data"])
             data["history"].append({"at": timestamp, "action": "information_added", "by": user["display_name"], "notes": notes})
-            db.execute("INSERT INTO photos VALUES (?,?,?,?,?)", (uuid4().hex, identifier, "additional", mime, content))
+            db.execute("INSERT INTO photos(id,report_id,kind,mime,content) VALUES (?,?,?,?,?)", (uuid4().hex, identifier, "additional", mime, content))
             db.execute("UPDATE reports SET status='submitted',revision=revision+1,updated_at=?,data=? WHERE id=?",
                        (timestamp, json.dumps(data), identifier))
         return self.get_report(identifier, user)
+
+
+from operations import OperationsMixin
+
+
+class Records(OperationsMixin, BaseRecords):
+    """Versioned reports, work visits, staff accounts and restoration evidence."""

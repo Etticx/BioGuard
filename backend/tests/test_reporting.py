@@ -36,7 +36,7 @@ def submit(client, ground, **changes):
 
 
 def assignment(team, revision=1, **changes):
-    return {"revision":revision,"decision":"assign","confirmed_species":"Leucaena leucocephala",
+    return {"revision":revision,"decision":"assign","due_on":date.today().isoformat(),"confirmed_species":"Leucaena leucocephala",
             "confirmed_invasive":True,"notes":"Verified by ecology officer", "assigned_team_id":team,
             "removal_instructions":"Approved site-specific removal instructions",
             "replacement_species":"Officer-selected replacement",

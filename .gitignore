@@ -10,3 +10,9 @@ colab/__pycache__/
 colab/bioguard_comparison_dataset.zip
 
 backend/data/
+
+# Private pilot captures and reviewed field manifests
+field-tests/photos/
+field-tests/manifest.json
+field-tests/results.json
+deploy/.env

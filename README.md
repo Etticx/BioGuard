@@ -1,7 +1,7 @@
 # BioGuard — identification and reporting prototype
 
 Choose a plant photo, identify it with the supplied model, and see a suggested species.
-Identification stays temporary. Photos and results are saved only when a ground-team member explicitly submits a report.
+Identification stays temporary. Opening a report form after staff sign-in saves a local draft; submitting explicitly stores the report on the server.
 
 ## Project
 
@@ -47,10 +47,14 @@ The workflow has two roles:
    site/block, nearby landmark, amount seen, observation date and optional note/overview photo.
 2. **Ecology officer:** open **http://127.0.0.1:8000/officer**, review the evidence,
    confirm/correct the species, request more information, close without action, or
-   approve removal and replanting and assign a ground team.
+   assign an inspection, monitoring, removal, planting or follow-up visit.
 3. **Ground team:** open **Team reports** in the app to see review requests and
    approved removal, replacement-species and replanting instructions. Requested
    additional photos can be submitted back to the same report.
+4. **Ground team:** start the visit, report problems or submit dated completion photos.
+   Save evidence as a draft if it needs to be finished later.
+5. **Ecology officer:** verify evidence, request corrections, arrange a separate
+   planting/follow-up visit, or reopen the action plan when regrowth is found.
 
 The officer chooses a replacement species appropriate to the site. The model never
 chooses replacement plants or authorizes removal. Officer confirmation is stored
@@ -59,8 +63,9 @@ separately from the original model suggestion, confidence and model fingerprint.
 On the first backend start, two local accounts (`grounds` and `ecology`) receive
 random passwords. Their details are written to **backend/data/local-accounts.json**
 on this computer. Open that ignored local file to sign in; do not commit or share it.
-Sessions expire after eight hours. The app keeps its session in memory and asks for
-sign-in again after a restart; the officer dashboard uses an HTTP-only session cookie.
+Sessions expire after eight hours. Native tokens use SecureStore; browser phone sessions
+stay in memory. The officer dashboard uses an HTTP-only session cookie. Staff accounts,
+teams, sites and password resets are managed from the ecology desk.
 
 Submitted reports and protected photo evidence persist in **backend/data/bioguard.sqlite3**.
 The whole data directory is ignored by Git. Only the ecology officer and the reporting
@@ -68,10 +73,11 @@ or assigned team can read a report and its photos. All review changes retain an 
 history; stale reviews are rejected. A retry of the same submission does not create a
 second report. The server computes saved predictions instead of accepting a client claim.
 
-Keep this prototype on the local network. Hosted use needs HTTPS and proper account
-administration and backups. No website has been published. Completion evidence,
-post-work verification and follow-up/regrowth visits are the next workflow milestone;
-an assigned report does not claim that removal or replanting has been completed.
+The local staff prototype includes completion evidence, officer verification, separate
+visits, regrowth/survival checks, in-app updates, draft recovery and backups. An assigned
+report does not claim that its field work has been completed. HTTPS hosting files and
+signed-build profiles are prepared; no website or signed build has been published.
+See PILOT_GUIDE.md for the remaining real-device and hosting checks.
 
 For a browser preview, export the app from `mobile/` with `npx expo export --platform web`,
 then run `./Start-Preview.ps1` from this folder. It serves http://localhost:8082/ with
@@ -158,8 +164,8 @@ Server preprocessing matches the package: EXIF orientation, RGB, aspect-preservi
 Normalisation is already embedded in the model.
 
 The phone converts the selected image to JPEG (95% quality), limiting its longest
-edge to 2048 pixels without cropping, for upload compatibility. Only temporary
-cache copies are created. The app deletes its copies when you change the photo,
+edge to 2048 pixels without cropping, for upload compatibility. Identification creates temporary
+cache copies. Saving a draft also retains a durable local photo copy. The app deletes its copies when you change the photo,
 start again, or close the screen normally; the OS may retain cache after a crash.
 Original gallery photos are not deleted. The identification endpoint handles uploads in memory and does not save them.
 Submitting a report explicitly saves its photos, location, model suggestion and review history. The local Wi-Fi demo uses HTTP;
@@ -170,21 +176,18 @@ its source/attribution manifest and evaluation files. Its reported training metr
 are the package author's figures; local smoke checks do not independently establish
 field accuracy.
 
-## Current verification notes
+## Staff pilot workflow
 
-- TypeScript, lint, 7 client contract checks and 43 backend checks pass for reporting.
-- Android, iPhone and browser bundles export successfully. Real-device testing remains pending.
-- Expo Doctor passes all 18 checks; Android/iPhone/browser bundles export successfully.
-- The live browser report flow was verified: ground sign-in, real model identification,
-  submission receipt, officer inbox/review, approved assignment and team instructions.
-  One clearly labelled demo report is retained for trying the interface.
-- The browser gallery, JPEG preparation, loading state, real model response,
-  low-confidence message, and reset were exercised end to end.
-- Pixel preprocessing matches the original package exactly on the packaged evaluation figure.
-- No physical phone test, signed APK, or TestFlight build has been completed yet.
-- Expo's development server is started with --offline to skip external account checks;
-  it still serves the app over the local Wi-Fi.
-- npm audit reports 29 upstream dependency findings (11 moderate, 18 high), largely
-  involving build/routing tools. Compatible fixes were attempted; npm proposes
-  incompatible framework changes for the remaining findings. Review and resolve
-  these before a public release rather than forcing SDK-incompatible versions.
+See [PILOT_GUIDE.md](PILOT_GUIDE.md) for evidence, ecology verification, separate
+follow-up visits, accounts, drafts, retries, restoration and hosting instructions.
+
+Version 0.2 adds flexible visits, dates/priority, reassignment/cancellation/reopening,
+duplicate links, completion photos, corrections, regrowth/survival and audit history.
+Reports can be saved when identification is unavailable. The model and threshold
+are unchanged. Local drafts keep photo copies; queued uploads use stable retry keys.
+In-app updates refresh while open; OS push/background delivery remains future work.
+
+Physical Android/iPhone tests, signed builds and HTTPS container deployment remain
+pending. Bundle export does not establish native behavior or field accuracy.
+Original model ZIPs and attribution files are preserved. npm audit reports 29
+upstream findings (11 moderate, 18 high); assess these before public release.

@@ -1,9 +1,11 @@
 """Authenticated reporting and ecology review, shared by mobile and web."""
+from field_clock import field_today
 from datetime import date
 from hashlib import sha256
 from io import BytesIO
 import json
 from pathlib import Path
+import os
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
@@ -32,11 +34,19 @@ class Details(BaseModel):
     extent: Literal["one", "few", "patch", "unsure"]
     observed_on: date
     notes: str = Field(default="", max_length=1200)
+    identify_requested: bool = True
+    identification_questioned: bool = False
+    site_id: str | None = None
+    block_id: str | None = None
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     request_key: str = Field(min_length=8, max_length=100, pattern=r"^[a-zA-Z0-9_-]+$")
 
     @model_validator(mode="after")
     def valid_date(self):
-        if self.observed_on > date.today():
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValueError("Add both coordinates, or leave both empty.")
+        if self.observed_on > field_today():
             raise ValueError("Observation date cannot be in the future.")
         return self
 
@@ -44,11 +54,15 @@ class Details(BaseModel):
 class Review(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
     revision: int = Field(ge=1)
-    decision: Literal["assign", "no_action", "request_info"]
+    decision: Literal["assign", "no_action", "request_info", "cancel", "duplicate", "reopen"]
+    work_type: Literal["inspection", "monitoring", "removal", "replanting", "removal_replanting", "follow_up"] = "removal_replanting"
+    due_on: date | None = None
+    priority: Literal["normal", "high"] = "normal"
     confirmed_species: str = Field(default="", max_length=160)
     confirmed_invasive: bool | None = None
     notes: str = Field(min_length=1, max_length=1600)
     assigned_team_id: str | None = None
+    duplicate_of: str | None = None
     removal_instructions: str = Field(default="", max_length=1600)
     replacement_species: str = Field(default="", max_length=160)
     replanting_instructions: str = Field(default="", max_length=1600)
@@ -56,12 +70,17 @@ class Review(BaseModel):
     @model_validator(mode="after")
     def assignment_needs_approval(self):
         if self.decision == "assign":
-            if not self.confirmed_species or self.confirmed_species.lower() == "unknown" or self.confirmed_invasive is not True:
-                raise ValueError("Confirm an invasive species before approving removal.")
-            if not all((self.assigned_team_id, self.removal_instructions, self.replacement_species, self.replanting_instructions)):
-                raise ValueError("Choose a team and provide removal and replanting instructions.")
+            if not self.assigned_team_id or not self.due_on or self.due_on < field_today():
+                raise ValueError("Choose a team and a visit date, today or later.")
+            if self.work_type in {"removal", "removal_replanting"}:
+                if not self.confirmed_species or self.confirmed_species.lower() == "unknown" or self.confirmed_invasive is not True or not self.removal_instructions:
+                    raise ValueError("Verify the invasive species and provide removal instructions.")
+            if self.work_type in {"replanting", "removal_replanting"} and not all((self.replacement_species, self.replanting_instructions)):
+                raise ValueError("Choose the replacement species and planting instructions.")
         elif any((self.assigned_team_id, self.removal_instructions, self.replacement_species, self.replanting_instructions)):
             raise ValueError("Work instructions belong to an approved assignment.")
+        if self.decision == "duplicate" and not self.duplicate_of:
+            raise ValueError("Choose the original report.")
         return self
 
 
@@ -74,6 +93,8 @@ def user_from(request, role=None):
     user = request.app.state.records.session_user(token_from(request))
     if not user:
         raise HTTPException(401, "Sign in to continue.")
+    if user.get("must_change_password") and request.url.path not in {"/auth/me", "/auth/password", "/auth/logout"}:
+        raise HTTPException(403, "Change your temporary password before continuing.")
     if role and user["role"] != role:
         raise HTTPException(403, "This action is for the ecology officer." if role == "officer" else "Use a ground-team account.")
     return user
@@ -104,7 +125,7 @@ async def login(request: Request, details: Login):
     from fastapi.responses import JSONResponse
     response = JSONResponse(result)
     response.set_cookie("bioguard_session", result["token"], httponly=True, samesite="strict",
-                        secure=request.url.scheme == "https", max_age=8 * 3600)
+                        secure=os.environ.get("BIOGUARD_SECURE_COOKIES")=="1" or request.url.scheme == "https", max_age=8 * 3600)
     response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -141,20 +162,23 @@ async def submit(request: Request):
         if form.get("overview") is not None:
             mime, overview = await read_photo(form["overview"])
             photos.append(("overview", mime, overview))
-        # The server computes the saved suggestion; clients cannot forge confidence or invasive status.
-        async with request.app.state.inference_lock:
-            try:
-                prediction = await run_in_threadpool(request.app.state.predictor.predict, content)
-            except InvalidPhoto as error:
-                raise HTTPException(422, str(error)) from error
-            except Exception as error:
-                raise HTTPException(503, "Identification is unavailable. Your report was not saved; please retry.") from error
         metadata = details.model_dump(mode="json")
+        request.app.state.records.validate_location(metadata)
         request_key = metadata.pop("request_key")
         digest = sha256(json.dumps(metadata, sort_keys=True).encode() + b"".join(sha256(photo[2]).digest() for photo in photos)).hexdigest()
+        prediction = None
         predictor = request.app.state.predictor
-        provenance = {"architecture": predictor.architecture, "review_threshold": predictor.review_threshold,
-                      "sha256": getattr(predictor, "model_sha256", None)}
+        provenance = {"status": "skipped" if not details.identify_requested else "unavailable"}
+        # Validate the photo independently; model downtime must not prevent a sighting report.
+        if predictor is not None and details.identify_requested:
+            async with request.app.state.inference_lock:
+                try:
+                    prediction = await run_in_threadpool(predictor.predict, content)
+                    provenance = {"status": "available", "architecture": predictor.architecture,
+                                  "review_threshold": predictor.review_threshold,
+                                  "sha256": getattr(predictor, "model_sha256", None)}
+                except Exception:
+                    provenance = {"status": "unavailable"}
         try:
             return await run_in_threadpool(request.app.state.records.create_report, user, metadata, prediction,
                                           provenance, photos, request_key, digest)
@@ -187,7 +211,7 @@ def photo(identifier: str, photo_id: str, request: Request):
 def review(identifier: str, details: Review, request: Request):
     user = user_from(request, "officer")
     try:
-        result = request.app.state.records.review_report(identifier, user, details.model_dump())
+        result = request.app.state.records.review_report(identifier, user, details.model_dump(mode="json"))
     except RecordConflict as error:
         raise HTTPException(409, str(error)) from error
     except ValueError as error:

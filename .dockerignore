@@ -1,0 +1,17 @@
+.git
+**/.git
+mobile/node_modules
+mobile/.expo
+mobile/dist
+mobile/.env*
+backend/.venv
+backend/data
+backend/model
+**/__pycache__
+**/.pytest_cache
+training
+*.zip
+!bioguard_comparison_winner.zip
+
+field-tests
+deploy/.env

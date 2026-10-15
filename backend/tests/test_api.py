@@ -43,7 +43,7 @@ def client(tmp_path):
 
 def test_health_states_no_storage(client):
     assert client.get("/health").json() == {
-        "status": "ready", "model_architecture": "EfficientNetV2B0",
+        "identification_available": True, "status": "ready", "model_architecture": "EfficientNetV2B0",
         "review_threshold": 0.56, "supported_species_count": 9,
         "stores_identification_photos": False, "stores_identification_results": False,
         "stores_submitted_reports": True, "report_storage": "only explicitly submitted reports",
