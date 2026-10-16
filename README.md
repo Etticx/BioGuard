@@ -1,5 +1,7 @@
 # BioGuard — private beta preparation
 
+**Local startup and links:** [LOCAL_START.md](LOCAL_START.md) covers Android, iPhone, the laptop dashboard and every local service.
+
 Choose a plant photo, identify it with the supplied model, and see a suggested species.
 Identification stays temporary. Opening a report form after staff sign-in saves a local draft; submitting explicitly stores the report on the server.
 

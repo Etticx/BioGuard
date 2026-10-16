@@ -1,4 +1,5 @@
 import json
+import pytest
 from datetime import date,timedelta
 from fastapi.testclient import TestClient
 from app import create_app
@@ -129,6 +130,22 @@ def test_forced_password_change_revocation_and_admin_guards(setup):
  assert client.post(f'/admin/users/{officer_id}/active',headers=officer,json={'active':False}).status_code==422
  reset=client.post(f"/admin/users/{created['id']}/reset",headers=officer);assert reset.status_code==200
  assert client.post('/auth/login',json={'username':'newstaff','password':'new-staff-password'}).status_code==401
+
+@pytest.mark.parametrize('new_password', [' field-password', 'field-password ', '\t field-password \t'])
+def test_password_changes_preserve_whitespace_and_revoke_sessions(setup,new_password):
+ client,ground,*_=setup
+ response=client.post('/auth/password',headers=ground,json={'current_password':'ground-test-password','new_password':new_password})
+ assert response.status_code==204,response.text
+ assert client.get('/auth/me',headers=ground).status_code==401
+ assert client.post('/auth/login',json={'username':'grounds','password':new_password.strip()}).status_code==401
+ response=client.post('/auth/login',json={'username':'grounds','password':new_password})
+ assert response.status_code==200,response.text
+ headers={'Authorization':'Bearer '+response.json()['token']};client.cookies.clear()
+ response=client.post('/auth/password',headers=headers,json={'current_password':new_password,'new_password':'replacement-password'})
+ assert response.status_code==204,response.text
+ assert client.get('/auth/me',headers=headers).status_code==401
+ assert client.post('/auth/login',json={'username':'grounds','password':'replacement-password'}).status_code==200
+
 
 def test_backup_contains_evidence_and_restores_to_new_directory(setup,tmp_path):
  client,ground,officer,_,_,api=setup

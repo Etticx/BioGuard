@@ -12,7 +12,14 @@ $bioNode = if (Test-Path -LiteralPath $bioBundledNode) { $bioBundledNode } else 
 $bioVersion = (& $bioNode --version).TrimStart('v') -as [version]
 if ($bioVersion -lt [version]'22.13.0') { throw 'Use Node 24 LTS (or Node 22.13+) to run this beta.' }
 if (-not (Test-Path -LiteralPath $bioPython)) { throw 'Prepare backend/.venv using README.md first.' }
-if ([System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners().Port -contains $ApiPort) { throw "Port $ApiPort is already running. Stop that beta or choose another -ApiPort." }
+# Probe the actual IPv4 socket: Windows listener enumeration can miss an occupied port.
+$bioApiProbe = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any,$ApiPort)
+try {
+    $bioApiProbe.ExclusiveAddressUse = $true
+    $bioApiProbe.Start()
+} catch {
+    throw "Port $ApiPort is already in use or reserved by Windows. If BioGuard is already running, open http://localhost:$ApiPort/ or http://localhost:$ApiPort/officer . To restart, press Ctrl+C in its original terminal first. Otherwise choose an available -ApiPort."
+} finally { $bioApiProbe.Stop() }
 if ($Mode -eq 'Expo') {
     $bioProbe = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any,$ExpoPort)
     try { $bioProbe.Start() } catch { throw "Port $ExpoPort is occupied or reserved by Windows. Choose another -ExpoPort." } finally { $bioProbe.Stop() }

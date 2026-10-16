@@ -1,5 +1,7 @@
 # BioGuard private beta — October 15, 2026
 
+For device-by-device startup and local links, see [LOCAL_START.md](LOCAL_START.md).
+
 The core workflow is implemented. This is a local staff-only beta candidate;
 physical-device acceptance, fresh field accuracy and hosted recovery are not certified.
 Nothing is publicly published or submitted to an app store.

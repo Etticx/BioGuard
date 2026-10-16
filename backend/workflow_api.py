@@ -60,6 +60,8 @@ class Verification(Strict):
         if self.assigned_team_id and not self.next_visit_on:raise ValueError("Choose a next visit date with the team.")
         return self
 class Password(Strict):
+    # Passwords must be hashed exactly as entered, just as they are at login.
+    model_config=ConfigDict(str_strip_whitespace=False,extra="forbid")
     current_password:str=Field(min_length=1,max_length=200)
     new_password:str=Field(min_length=10,max_length=200)
 class NewUser(Strict):

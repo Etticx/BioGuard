@@ -22,3 +22,6 @@ beta/device-results.json
 beta/field-results.json
 
 mobile/.beta-check-dist/
+
+# Disposable test output
+/review/pytest-password-review/
