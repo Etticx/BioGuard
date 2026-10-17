@@ -2,11 +2,13 @@
 
 ## Working flow
 
-Ground team submits a sighting → management reviews and assigns an ecology team → ecology accepts and submits findings/evidence → management requests changes, assigns the next approved step or closes the ticket.
+Ground team submits a sighting → management confirms and assigns restoration → ecology removes and replants → management reviews both evidence photos and closes the ticket or requests changes.
 
-New jobs have three types: **inspection**, **removal**, **replanting**. Inspection findings include species and a recommended next action. Recommendations do not authorize removal. Management confirms species/invasive status and approves removal instructions; replanting requires an approved replacement species and planting instructions. Each completed step needs management evidence approval. No follow-up visit is compulsory to close.
+New assignments are **restoration jobs**: management confirms the invasive species, approves removal instructions, and chooses the replacement species and planting instructions together. Ecology removes and replants within the same job. Both completed parts require dated photo evidence before management can approve and close the ticket.
 
-Existing retired visit types remain read-only in history. Older ground-team assignments require explicit reassignment to ecology where supported; retired active jobs can be cancelled and replaced through a reopened ticket. Photos and previous evidence are retained.
+If planting is delayed, ecology records a reason and removal evidence. The job remains active; later planting evidence completes the same assignment. Management can request corrections without discarding earlier photos.
+
+Existing individual-step jobs and older records retain their original type, photos and history. New management assignments use the standard restoration workflow.
 
 ## Staff, locations and access
 
@@ -70,7 +72,7 @@ Use at least one Android and one iPhone with separate test staff accounts:
 2. Large/rotated photos; visible JPEG and model results.
 3. Known species, similar unsupported species, non-plant and unclear image. Check tentative wording; a high score does not prove a supported species.
 4. Send a labelled test sighting; compare landmark and photos in management.
-5. Sign in as each role. Assign and accept inspection; submit findings, approve removal and replanting plans, review evidence and close. Check requested changes.
+5. Sign in as each role. Assign and accept one restoration job; record removal and replanting photos, review both and close. Check requested changes.
 6. Save report/evidence drafts; force-close, reopen, sign in and verify copied photos survive.
 7. Interrupt an upload on weak Wi-Fi; retry and verify one receipt/record. Resolve stale instructions without duplicate work.
 8. Sign out and use another team account; confirm other accounts' drafts/private photos are hidden. Check expiry/reset.

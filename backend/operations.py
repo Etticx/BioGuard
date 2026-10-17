@@ -170,7 +170,7 @@ class OperationsMixin:
         value.update({key:row[key] for key in ("id","report_id","team_id","status","revision","created_at","updated_at")})
         team=db.execute("SELECT name,role FROM teams WHERE id=?",(row["team_id"],)).fetchone()
         value["team_name"]=team[0] if team else "Former team"
-        value["legacy"]=value.get("work_type") not in {"inspection","removal","replanting"}
+        value["legacy"]=value.get("work_type") not in {"restoration","inspection","removal","replanting"}
         value["requires_reassignment"]=row["status"] not in TERMINAL and (not team or team["role"]!="ecology")
         value["overdue"]=bool(value.get("due_on") and value["due_on"]<field_today().isoformat() and row["status"] not in TERMINAL | {"awaiting_verification"})
         return value
@@ -183,8 +183,10 @@ class OperationsMixin:
 
     def new_work(self,db,report_id,team_id,plan,user):
         if user["role"]!="management":raise ValueError("Only management can assign work.")
-        if plan.get("work_type") not in {"inspection","removal","replanting"}:raise ValueError("Choose inspection, removal or replanting.")
+        if plan.get("work_type") not in {"restoration","inspection","removal","replanting"}:raise ValueError("Choose an approved restoration job.")
         if not db.execute("SELECT teams.id FROM teams JOIN users ON users.team_id=teams.id WHERE teams.id=? AND teams.active=1 AND teams.role='ecology' AND users.active=1 AND users.role='ecology'",(team_id,)).fetchone():raise ValueError("Choose an active ecology team with at least one active ecology member.")
+        if plan.get("work_type")=="restoration" and (plan.get("confirmed_invasive") is not True or not all(plan.get(key) for key in ("confirmed_species","removal_instructions","replacement_species","replanting_instructions")) or plan["confirmed_species"].strip().lower()=="unknown"):
+            raise ValueError("Approve the invasive species, removal instructions and replacement planting plan.")
         identifier,timestamp=uuid4().hex,now()
         data={**plan,"completions":[],"verification":None,"history":[{"at":timestamp,"action":"assigned","by":user["display_name"]}]}
         db.execute("INSERT INTO work_items VALUES (?,?,?,?,?,?,?,?)",(identifier,report_id,team_id,"assigned",1,timestamp,timestamp,json.dumps(data)))
@@ -241,7 +243,7 @@ class OperationsMixin:
             team_id=plan["assigned_team_id"]
             if not db.execute("SELECT teams.id FROM teams JOIN users ON users.team_id=teams.id WHERE teams.id=? AND teams.active=1 AND teams.role='ecology' AND users.active=1 AND users.role='ecology'",(team_id,)).fetchone():raise ValueError("Choose a staffed, active ecology team.")
             data=json.loads(work["data"])
-            if data.get("work_type") not in {"inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Cancel it and assign a new visit.")
+            if data.get("work_type") not in {"restoration","inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Cancel it and assign a new visit.")
             if data["completions"] and data["work_type"] != plan["work_type"]:
                 raise ValueError("Keep the visit type after evidence has been submitted. Cancel and create a new visit to change it.")
             previous_team=work["team_id"]
@@ -264,7 +266,7 @@ class OperationsMixin:
             if not db.execute("SELECT teams.id FROM teams JOIN users ON users.team_id=teams.id WHERE teams.id=? AND teams.role='ecology' AND teams.active=1 AND users.id=? AND users.role='ecology' AND users.active=1",(work["team_id"],user["id"])).fetchone():return None
             if work["revision"]!=revision or work["status"] not in {"assigned","accepted","in_progress","correction_requested","blocked"}:conflict("Refresh this visit before updating it.")
             data=json.loads(work["data"])
-            if data.get("work_type") not in {"inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Ask management for a new assignment.")
+            if data.get("work_type") not in {"restoration","inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Ask management for a new assignment.")
             if action=="accept":
                 if work["status"]!="assigned":conflict("This job has already been accepted. Refresh it.")
                 status="accepted"
@@ -296,11 +298,19 @@ class OperationsMixin:
                 return self.get_report(identifier,user)
             if work["revision"]!=details["revision"] or work["status"] not in {"accepted","in_progress","correction_requested","blocked"}:conflict("This visit changed. Refresh it before submitting evidence.")
             kind=data["work_type"];stage=details["stage"]
-            if kind not in {"inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Ask management for a new assignment.")
+            if kind not in {"restoration","inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Ask management for a new assignment.")
             if kind=="inspection" and (not details.get("suggested_species") or not details.get("recommended_action")):raise ValueError("Record the inspected species and recommended next action.")
             if kind=="inspection" and details.get("recommended_action")=="removal" and not details.get("removal_recommendation"):raise ValueError("Describe the recommended removal plan for management review.")
             if kind=="inspection" and details.get("recommended_action")=="replanting" and not details.get("replacement_recommendation"):raise ValueError("Describe the recommended replacement planting for management review.")
             if kind=="removal" and stage!="removal" or kind=="replanting" and stage!="replanting" or kind=="removal_replanting" and stage not in {"removal","both"} or kind in {"inspection","monitoring","follow_up"} and stage!="observation":raise ValueError("Choose the evidence stage for this visit.")
+            if kind=="restoration":
+                if stage not in {"removal","replanting","both"}:raise ValueError("Record removal and replanting evidence for this restoration job.")
+                if stage=="both" and len(photos)!=2:raise ValueError("Add a removal photo and a replanting photo.")
+                if stage=="removal" and not details.get("planting_pending_reason"):raise ValueError("Explain why replanting is pending.")
+                if stage=="replanting":
+                    prior=next((item for item in reversed(data["completions"]) if item.get("removal_complete") and item.get("removed_on") and item.get("photo_ids")),None)
+                    if not prior:raise ValueError("Record removal evidence before finishing replanting.")
+                    if details.get("planted_on") and details["planted_on"]<prior["removed_on"]:raise ValueError("Planting cannot precede the recorded removal.")
             if stage in {"removal","both"} and (not details.get("removed_on") or not details.get("removal_complete")):raise ValueError("Confirm the removal date and completion.")
             if stage in {"replanting","both"}:
                 if not details.get("planted_on") or not details.get("planted_species") or (details.get("quantity") or 0)<1:raise ValueError("Record the planted species, quantity and date.")
@@ -315,10 +325,12 @@ class OperationsMixin:
                 photo_id=uuid4().hex;item["photo_ids"].append(photo_id)
                 db.execute("INSERT INTO photos(id,report_id,kind,mime,content,work_id) VALUES (?,?,?,?,?,?)",(photo_id,identifier,"work_evidence",mime,content,work_id))
             data["completions"].append(item);data["verification"]=None
-            db.execute("UPDATE work_items SET status='awaiting_verification',revision=revision+1,updated_at=?,data=? WHERE id=?",(now(),json.dumps(data),work_id))
+            partial=kind=="restoration" and stage=="removal"
+            state="in_progress" if partial else "awaiting_verification"
+            db.execute("UPDATE work_items SET status=?,revision=revision+1,updated_at=?,data=? WHERE id=?",(state,now(),json.dumps(data),work_id))
             row=db.execute("SELECT * FROM reports WHERE id=?",(identifier,)).fetchone()
-            self.event(db,row,json.loads(row["data"]),"evidence_submitted",user,details["notes"],"awaiting_verification")
-            self.emit(db,f"evidence_{work_id}_{details['request_key']}",identifier,"Visit evidence is ready for management review.",role="management")
+            self.event(db,row,json.loads(row["data"]),"removal_recorded" if partial else "evidence_submitted",user,details["notes"],state)
+            self.emit(db,f"evidence_{work_id}_{details['request_key']}",identifier,"Removal recorded; replanting remains pending." if partial else "Job evidence is ready for management review.",role="management")
         return self.get_report(identifier,user)
 
     def verify_work(self,identifier,work_id,user,details):
@@ -329,9 +341,16 @@ class OperationsMixin:
             if not work:return None
             if work["revision"]!=details["revision"] or work["status"]!="awaiting_verification":conflict("This visit is no longer awaiting this verification. Refresh it.")
             data=json.loads(work["data"])
-            if data.get("work_type") not in {"inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Cancel it and create a new assignment.")
+            if data.get("work_type") not in {"restoration","inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Cancel it and create a new assignment.")
             if not data.get("completions"):raise ValueError("This visit has no evidence to review.")
             row=db.execute("SELECT * FROM reports WHERE id=?",(identifier,)).fetchone()
+            if data.get("work_type")=="restoration":
+                if details.get("next_plan") or details.get("next_visit_on"):raise ValueError("Review both parts of the same restoration job; use corrections for unfinished work.")
+                if details["decision"]=="accept":
+                    last=data["completions"][-1]
+                    removed=any(item.get("removal_complete") and item.get("removed_on") and item.get("photo_ids") for item in data["completions"])
+                    if not removed or last.get("stage") not in {"both","replanting"} or not all(last.get(key) for key in ("planted_on","planted_species","quantity","photo_ids")):
+                        raise ValueError("Removal and replanting evidence are required before closing restoration.")
             next_plan=details.get("next_plan")
             if next_plan and next_plan["revision"]!=row["revision"]:conflict("This report changed. Refresh before approving the next plan.")
             if next_plan and next_plan.get("decision")!="assign":raise ValueError("Choose assignment for the next plan.")

@@ -216,12 +216,12 @@ See [PRIVATE_BETA.md](PRIVATE_BETA.md) for the beta checklist and
 ## Three-role ticket flow
 
 1. Grounds submits a sighting with a photo and location.
-2. Management reviews it and assigns an ecology team an inspection, removal or replanting job.
-3. Ecology accepts the job, records findings or completed work, and sends photo evidence for review.
-4. Management requests changes, approves and assigns the next step, or approves and closes the ticket.
+2. Management reviews it, confirms the invasive species and assigns one restoration job with removal and replacement planting instructions.
+3. Ecology accepts the job, removes and replants, then sends both dated evidence photos for review.
+4. Management requests changes or approves both parts and closes the ticket.
 
 Removal requires management confirmation of the species and invasive status plus approved instructions.
-Replacement planting uses the approved species and instructions. Evidence upload never closes a ticket automatically.
+Replacement planting uses the approved species and instructions. If planting is delayed, ecology records a reason and removal progress on the same active job. Evidence upload never closes a ticket automatically.
 Existing visits and evidence remain in history. Older assignments to ground teams require explicit reassignment; retired visit types are read-only.
 
 After a role update, stop the beta launcher with Ctrl+C, restart it and sign in again. Local testing account details remain in the ignored local-accounts.json file.

@@ -55,7 +55,7 @@ class Review(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
     revision: int = Field(ge=1)
     decision: Literal["assign", "no_action", "request_info", "cancel", "duplicate", "reopen"]
-    work_type: Literal["inspection", "removal", "replanting"] = "inspection"
+    work_type: Literal["restoration", "inspection", "removal", "replanting"] = "restoration"
     due_on: date | None = None
     priority: Literal["normal", "high"] = "normal"
     confirmed_species: str = Field(default="", max_length=160)
@@ -72,10 +72,10 @@ class Review(BaseModel):
         if self.decision == "assign":
             if not self.assigned_team_id or not self.due_on or self.due_on < field_today():
                 raise ValueError("Choose a team and a visit date, today or later.")
-            if self.work_type in {"removal", "removal_replanting"}:
+            if self.work_type in {"restoration", "removal", "removal_replanting"}:
                 if not self.confirmed_species or self.confirmed_species.lower() == "unknown" or self.confirmed_invasive is not True or not self.removal_instructions:
                     raise ValueError("Verify the invasive species and provide removal instructions.")
-            if self.work_type in {"replanting", "removal_replanting"} and not all((self.replacement_species, self.replanting_instructions)):
+            if self.work_type in {"restoration", "replanting", "removal_replanting"} and not all((self.replacement_species, self.replanting_instructions)):
                 raise ValueError("Choose the replacement species and planting instructions.")
         elif any((self.assigned_team_id, self.removal_instructions, self.replacement_species, self.replanting_instructions)):
             raise ValueError("Work instructions belong to an approved assignment.")

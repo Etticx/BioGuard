@@ -35,6 +35,7 @@ class Completion(Strict):
     planted_on:date|None=None
     planted_species:str=Field(default="",max_length=160)
     quantity:int|None=Field(default=None,ge=1,le=100000)
+    planting_pending_reason:str=Field(default="",max_length=1600)
     regrowth:Literal["yes","no","unknown"]|None=None
     surviving_count:int|None=Field(default=None,ge=0,le=100000)
     checked_count:int|None=Field(default=None,ge=1,le=100000)
@@ -110,6 +111,8 @@ async def complete(identifier:str,work_id:str,request:Request):
         photos=[await read_photo(form.get("photo"))]
         if form.get("overview") is not None:photos.append(await read_photo(form["overview"]))
         values=details.model_dump(mode="json")
+        # Keep pre-restoration upload fingerprints stable for queued evidence retries.
+        if not values.get("planting_pending_reason"):values.pop("planting_pending_reason",None)
         digest=sha256(json.dumps(values,sort_keys=True).encode()+b"".join(sha256(photo[1]).digest() for photo in photos)).hexdigest()
         return await run_in_threadpool(invoke,request.app.state.records.complete_work,identifier,work_id,user,values,photos,digest)
 

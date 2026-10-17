@@ -46,11 +46,13 @@ becomes a confirmed invasive identification; comparison species are shown as
 ## Grounds, ecology and management
 
 1. **Ground team** identifies or photographs a plant and submits a sighting with location and notes. My sightings shows its progress and any requests for more information.
-2. **Management** reviews the sighting and assigns an ecology team an **inspection**, **removal** or **replanting** job.
-3. **Ecology field team** accepts the job, records inspection findings or completed work, and sends dated photo evidence for management review. Evidence can be saved locally as a draft.
-4. **Management** requests changes, approves evidence and assigns the next step on the same ticket, or approves and closes it. No extra follow-up visit is compulsory.
+2. **Management** reviews the sighting and confirms the invasive plant and assigns one **restoration job** covering removal and approved replacement planting.
+3. **Ecology field team** accepts the job, records removal and replanting with dated evidence photos, and submits the complete job for management review. Evidence can be saved locally as a draft.
+4. **Management** requests changes, approves both parts and closes the ticket. No extra follow-up visit is compulsory.
 
 Removal requires confirmed species, invasive status and management-approved instructions. Replanting uses an approved replacement species and instructions. The model suggests identification; it never authorizes removal or chooses replacements.
+
+If replanting is delayed, the ecology team records a reason and removal progress; the same job stays active until planting is finished. Existing individual-step assignments remain readable and can be completed using their original instructions.
 
 New installations generate random temporary credentials for `grounds`, `ecology` and `management`. Read the ignored `backend/data/local-accounts.json`, or `backend/data/private-beta/local-accounts.json` for the beta. Native tokens use SecureStore; browsers use an HTTP-only cookie. Management controls staff accounts, typed teams, sites and resets.
 
