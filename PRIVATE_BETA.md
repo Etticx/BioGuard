@@ -15,8 +15,10 @@ Nothing is publicly published or submitted to an app store.
 3. Run `./Start-PrivateBeta.ps1 -Mode Expo` in this folder. Keep the terminal open.
 4. Open the printed `exp://LAPTOP_IP:8383` address in Expo Go, or scan its QR code.
    The browser fallback is `http://LAPTOP_IP:8001/`; the ecology desk adds `/officer`.
-5. Privately open `backend/data/private-beta/local-accounts.json`. Use grounds in
-   the app and ecology at the desk. These are BioGuard accounts, separate from Expo.
+5. Privately open `backend/data/private-beta/local-accounts.json`. Sign into the
+   same BioGuard screen with either account: grounds opens the field workspace;
+   ecology opens management. On phones the management desk opens inside the app.
+   These are BioGuard accounts, separate from Expo.
    Change both temporary passwords when prompted, then sign in again.
 6. The officer can create individual testers and teams in Staff & sites. Share each
    person's temporary access privately; do not distribute the seed credentials file.
@@ -100,3 +102,17 @@ https://expo.dev/changelog/expo-go-57-login
 Private testing may start locally. All five readiness areas cannot be marked complete
 until actual phone results, reviewed field cases, HTTPS/recovery and distribution
 requirements have been checked. No claim of near-zero classification mistakes is made.
+
+## Unified sign-in
+
+Both roles use the main BioGuard link. The authenticated account determines the
+workspace; no role selector is needed. Browser sessions restore through an HttpOnly
+cookie, and native sessions use SecureStore. Ecology management opens inside the
+phone app through Expo Go's bundled WebView, with a validated session header on its
+initial request. Tokens are never added to dashboard URLs. Password changes take
+priority over workspace routing and revoke existing sessions.
+
+Download backup files from the laptop browser dashboard; embedded phone management
+shows a notice for those downloads. Physical iPhone/Android management login and
+sign-out still require device confirmation. Automated and browser verification
+used isolated synthetic accounts, not live reports.

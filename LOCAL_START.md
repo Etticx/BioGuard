@@ -42,9 +42,8 @@ If you do not need Expo Go, run this instead:
 .\Start-PrivateBeta.ps1 -Mode Web
 ```
 
-Then open [the app](http://localhost:8001/) or
-[the management dashboard](http://localhost:8001/officer).
-This mode runs the browser app, dashboard and API on 8001; it does not start Expo.
+Then open **[BioGuard](http://localhost:8001/)** and sign in. Your account opens
+the appropriate workspace: ground team or management. The direct
 
 Choose **one mode**. To switch, stop the current launcher with Ctrl+C, then run
 the other command. Rebuilding does not erase the beta's saved reports.
@@ -56,7 +55,8 @@ the other command. Rebuilding does not erase the beta's saved reports.
 3. In Expo Go, use **Scan QR code** and scan the current code shown by Expo.
 4. If the terminal does not show a QR, use the development server listed in Expo Go,
    or enter `exp://LAPTOP_IP:8383` if your app offers manual URL entry.
-5. At BioGuard's sign-in screen, use your **ground-team BioGuard account**.
+5. At BioGuard's shared sign-in screen, use your **BioGuard staff account**.
+   Ground staff open the field app; ecology staff open management inside the app.
 6. Try camera and gallery, identify a photo, then send a clearly labelled test report.
 
 Android testing is still pending in this project; these are startup instructions,
@@ -70,7 +70,9 @@ not a claim that a physical Android phone has passed the checklist.
    expo.dev in Safari alone does not sign into the Expo Go app.
 4. Use the iPhone's Camera app to scan the current Expo QR, then tap **Open in Expo Go**.
    Alternatively, tap the matching development server on Expo Go's Home screen.
-5. Sign into BioGuard with your ground-team account and try camera/gallery.
+5. Sign into BioGuard with your staff account. Ground staff open the field app;
+   ecology staff open management inside the app using the same session.
+6. For the ground-team flow, try camera/gallery.
 
 If the laptop needs Expo sign-in again, open a second PowerShell terminal in BioGuard:
 
@@ -93,10 +95,12 @@ standalone signed iOS distribution is a separate step.
 
 While either beta mode is running, open:
 
-**[http://localhost:8001/officer](http://localhost:8001/officer)**
+**[http://localhost:8001/](http://localhost:8001/)**
 
-Use the **ecology** account for the dashboard; use **grounds** in the phone app.
-These BioGuard accounts are separate from your Expo account.
+Use the same sign-in screen for both roles. **ecology** opens management;
+**grounds** opens the field workspace. You do not need to choose a role or remember
+a different link. `/officer` remains a direct shortcut and also routes signed-in
+ground staff to their workspace. These BioGuard accounts are separate from Expo.
 
 Current local test access is recorded privately in
 `backend/data/private-beta/local-accounts.json`. Passwords are intentionally not
@@ -110,8 +114,10 @@ The phone and dashboard must use the same beta server to see the same reports.
 
 ### Current private beta — use these
 
-- [App / identification](http://localhost:8001/) — ground-team sign-in.
-- [Management dashboard](http://localhost:8001/officer) — ecology sign-in.
+- [BioGuard shared sign-in](http://localhost:8001/) — automatically opens your
+  ground-team or ecology workspace after sign-in.
+- [Management shortcut](http://localhost:8001/officer) — ecology workspace;
+  ground accounts are routed to the field app.
 - [Team reports](http://localhost:8001/team) — ground-team reports and visits.
 - [Drafts and uploads](http://localhost:8001/drafts) — drafts on that browser/device.
 - [Updates](http://localhost:8001/updates) — staff notices.
@@ -168,7 +174,8 @@ An old QR image may point to a previous Wi-Fi address or port. Use the current
 terminal/server address after reconnecting to Wi-Fi. If needed, `ipconfig` shows
 the laptop's Wi-Fi IPv4 address.
 
-- **Wrong password on the dashboard:** check the port first. Beta uses **8001**;
+- **Sign-in fails:** either staff role can use the main beta link. Check the
+  port and password first. Beta uses **8001**;
   original uses **8000**. Their accounts and databases are separate. Several failed
   attempts can temporarily block sign-in for five minutes.
 - **Expo says the phone is not signed in:** return to Expo Go Home, tap the avatar,

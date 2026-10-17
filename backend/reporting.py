@@ -243,5 +243,14 @@ async def information(identifier: str, request: Request):
 
 
 @router.get("/officer", include_in_schema=False)
-def officer_page():
-    return FileResponse(Path(__file__).resolve().parent.parent / "web" / "index.html", headers={"Cache-Control": "no-store"})
+def officer_page(request: Request):
+    response = FileResponse(Path(__file__).resolve().parent.parent / "web" / "index.html", headers={"Cache-Control": "no-store"})
+    # The native officer WebView supplies its session only on the initial request.
+    # Validate it before establishing the HttpOnly cookie used by dashboard requests.
+    if request.headers.get("authorization"):
+        if not request.headers["authorization"].startswith("Bearer "):
+            raise HTTPException(401, "Sign in to continue.")
+        user_from(request, "officer")
+        response.set_cookie(request.app.state.cookie_name, token_from(request), httponly=True, samesite="strict",
+                            secure=os.environ.get("BIOGUARD_SECURE_COOKIES")=="1" or request.url.scheme == "https", max_age=8 * 3600)
+    return response

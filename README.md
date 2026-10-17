@@ -5,6 +5,8 @@
 Choose a plant photo, identify it with the supplied model, and see a suggested species.
 Identification stays temporary. Opening a report form after staff sign-in saves a local draft; submitting explicitly stores the report on the server.
 
+Both staff roles use one sign-in: ground accounts open the field workspace and ecology accounts open management. `/officer` remains an optional direct shortcut.
+
 ## Project
 
 - **mobile/** — Expo SDK 57 / React Native, React Native Paper, light theme, system fonts.
