@@ -18,7 +18,7 @@ class Strict(BaseModel):
     model_config=ConfigDict(str_strip_whitespace=True,extra="forbid")
 class Progress(Strict):
     revision:int=Field(ge=1)
-    action:Literal["start","blocked"]
+    action:Literal["accept","start","blocked"]
     notes:str=Field(default="",max_length=1600)
     @model_validator(mode="after")
     def reason(self):
@@ -38,6 +38,10 @@ class Completion(Strict):
     regrowth:Literal["yes","no","unknown"]|None=None
     surviving_count:int|None=Field(default=None,ge=0,le=100000)
     checked_count:int|None=Field(default=None,ge=1,le=100000)
+    suggested_species:str=Field(default="",max_length=160)
+    recommended_action:Literal["none","inspection","removal","replanting"]|None=None
+    removal_recommendation:str=Field(default="",max_length=1600)
+    replacement_recommendation:str=Field(default="",max_length=1600)
     @model_validator(mode="after")
     def dates(self):
         if any(value and value>field_today() for value in (self.observed_on,self.removed_on,self.planted_on)):raise ValueError("Evidence dates must be today or earlier.")
@@ -50,11 +54,15 @@ class Verification(Strict):
     revision:int=Field(ge=1)
     decision:Literal["accept","corrections","reopen"]
     notes:str=Field(min_length=1,max_length=1600)
+    next_plan:Review|None=None
     next_visit_on:date|None=None
     assigned_team_id:str|None=None
     no_followup_reason:str=Field(default="",max_length=1600)
     @model_validator(mode="after")
     def next_date(self):
+        if self.next_plan:
+            if self.decision!="accept" or self.next_plan.decision!="assign":raise ValueError("An approved next assignment belongs to acceptance only.")
+            if self.next_visit_on or self.assigned_team_id or self.no_followup_reason:raise ValueError("Use the next plan without older next-visit fields.")
         if self.next_visit_on and self.next_visit_on<field_today():raise ValueError("Schedule the next visit today or later.")
         if self.decision!="accept" and (self.next_visit_on or self.assigned_team_id or self.no_followup_reason):raise ValueError("Next-visit fields belong to acceptance only.")
         if self.assigned_team_id and not self.next_visit_on:raise ValueError("Choose a next visit date with the team.")
@@ -67,10 +75,11 @@ class Password(Strict):
 class NewUser(Strict):
     username:str=Field(min_length=2,max_length=80,pattern=r"^[a-zA-Z0-9_.-]+$")
     display_name:str=Field(min_length=1,max_length=100)
-    role:Literal["ground","officer"]
+    role:Literal["ground","ecology","management"]
     team_id:str|None=None
 class Active(Strict):active:bool
 class CatalogEntry(Strict):
+    role:Literal["ground","ecology"]="ecology"
     name:str=Field(min_length=1,max_length=100)
     site_id:str|None=None
 
@@ -83,18 +92,18 @@ def invoke(method,*args):
 
 @router.post("/reports/{identifier}/work/{work_id}/progress")
 def progress(identifier:str,work_id:str,details:Progress,request:Request):
-    user=user_from(request,"ground")
+    user=user_from(request,"ecology")
     return invoke(request.app.state.records.progress_work,identifier,work_id,user,details.revision,details.action,details.notes)
 
 @router.post("/reports/{identifier}/work/{work_id}/revise")
 def revise(identifier:str,work_id:str,details:Review,request:Request):
-    user=user_from(request,"officer")
+    user=user_from(request,"management")
     if details.decision!="assign":raise HTTPException(422,"Choose assignment to revise a visit.")
     return invoke(request.app.state.records.revise_work,identifier,work_id,user,details.revision,details.model_dump(mode="json"))
 
 @router.post("/reports/{identifier}/work/{work_id}/complete")
 async def complete(identifier:str,work_id:str,request:Request):
-    user=user_from(request,"ground")
+    user=user_from(request,"ecology")
     async with request.form(max_files=2,max_fields=1,max_part_size=LIMIT) as form:
         try:details=Completion.model_validate_json(form.get("details",""))
         except (ValidationError,TypeError) as error:raise HTTPException(422,"Check the evidence dates, stage, counts and note.") from error
@@ -106,7 +115,7 @@ async def complete(identifier:str,work_id:str,request:Request):
 
 @router.post("/reports/{identifier}/work/{work_id}/verify")
 def verify(identifier:str,work_id:str,details:Verification,request:Request):
-    user=user_from(request,"officer")
+    user=user_from(request,"management")
     return invoke(request.app.state.records.verify_work,identifier,work_id,user,details.model_dump(mode="json"))
 
 @router.get("/notifications")
@@ -120,7 +129,7 @@ def catalog(request:Request):
     user_from(request)
     return request.app.state.records.catalog()
 @router.get("/reports/{identifier}/duplicates")
-def duplicates(identifier:str,request:Request):return request.app.state.records.duplicate_candidates(identifier,user_from(request,"officer"))
+def duplicates(identifier:str,request:Request):return request.app.state.records.duplicate_candidates(identifier,user_from(request,"management"))
 @router.post("/auth/password",status_code=204)
 def password(details:Password,request:Request):
     user=user_from(request)
@@ -129,42 +138,42 @@ def password(details:Password,request:Request):
     response=Response(status_code=204);response.delete_cookie(request.app.state.cookie_name);return response
 @router.get("/admin/users")
 def users(request:Request):
-    user_from(request,"officer");return request.app.state.records.admin_users()
+    user_from(request,"management");return request.app.state.records.admin_users()
 @router.post("/admin/users",status_code=201)
 def add_user(details:NewUser,request:Request):
-    actor=user_from(request,"officer");temporary=secrets.token_urlsafe(15)
-    if details.role=="ground" and not details.team_id:raise HTTPException(422,"Choose a team for this staff member.")
+    actor=user_from(request,"management");temporary=secrets.token_urlsafe(15)
+    if details.role in {"ground","ecology"} and not details.team_id:raise HTTPException(422,"Choose a team for this staff member.")
     identifier=invoke(request.app.state.records.add_user,details.username,temporary,details.display_name,details.role,details.team_id,True)
     request.app.state.records.audit(actor,"user_created",identifier)
     return {"id":identifier,"temporary_password":temporary}
 @router.post("/admin/users/{identifier}/reset")
-def reset(identifier:str,request:Request):return {"temporary_password":invoke(request.app.state.records.reset_user,user_from(request,"officer"),identifier)}
+def reset(identifier:str,request:Request):return {"temporary_password":invoke(request.app.state.records.reset_user,user_from(request,"management"),identifier)}
 @router.post("/admin/users/{identifier}/active",status_code=204)
 def active_user(identifier:str,details:Active,request:Request):
-    invoke(request.app.state.records.set_user_active,user_from(request,"officer"),identifier,details.active);return Response(status_code=204)
+    invoke(request.app.state.records.set_user_active,user_from(request,"management"),identifier,details.active);return Response(status_code=204)
 @router.post("/admin/catalog/{kind}",status_code=201)
-def add_catalog(kind:str,details:CatalogEntry,request:Request):return invoke(request.app.state.records.add_catalog,user_from(request,"officer"),kind,details.name,details.site_id)
+def add_catalog(kind:str,details:CatalogEntry,request:Request):return invoke(request.app.state.records.add_catalog,user_from(request,"management"),kind,details.name,details.site_id,details.role)
 @router.post("/admin/catalog/{kind}/{identifier}/active",status_code=204)
 def active_catalog(kind:str,identifier:str,details:Active,request:Request):
-    invoke(request.app.state.records.set_catalog_active,user_from(request,"officer"),kind,identifier,details.active);return Response(status_code=204)
+    invoke(request.app.state.records.set_catalog_active,user_from(request,"management"),kind,identifier,details.active);return Response(status_code=204)
 @router.get("/admin/catalog")
 def admin_catalog(request:Request):
-    user_from(request,"officer")
+    user_from(request,"management")
     with request.app.state.records.connect() as db:return {kind:[dict(row) for row in db.execute(f"SELECT * FROM {kind} ORDER BY name")] for kind in ("teams","sites","blocks")}
 @router.get("/admin/audit")
 def audit(request:Request):
-    user_from(request,"officer")
+    user_from(request,"management")
     with request.app.state.records.connect() as db:return [dict(row) for row in db.execute("SELECT * FROM admin_audit ORDER BY created_at DESC LIMIT 200")]
 @router.post("/admin/backups",status_code=201)
 def backup(request:Request):
-    actor=user_from(request,"officer");result=request.app.state.records.backup_database();request.app.state.records.audit(actor,"backup_created",result["name"]);return result
+    actor=user_from(request,"management");result=request.app.state.records.backup_database();request.app.state.records.audit(actor,"backup_created",result["name"]);return result
 @router.get("/admin/backups")
 def backups(request:Request):
-    user_from(request,"officer");folder=request.app.state.records.directory/"backups"
+    user_from(request,"management");folder=request.app.state.records.directory/"backups"
     return [{"name":p.name,"bytes":p.stat().st_size} for p in sorted(folder.glob("backup-*.sqlite3"),reverse=True)] if folder.exists() else []
 @router.get("/admin/backups/{name}")
 def download(name:str,request:Request):
-    actor=user_from(request,"officer")
+    actor=user_from(request,"management")
     if not re.fullmatch(r"backup-[a-zA-Z0-9-]+\.sqlite3",name):raise HTTPException(404,"Backup not found.")
     target=request.app.state.records.directory/"backups"/name
     if not target.is_file():raise HTTPException(404,"Backup not found.")

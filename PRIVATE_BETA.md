@@ -14,13 +14,13 @@ Nothing is publicly published or submitted to an app store.
    Sign-in on expo.dev in Safari does not also sign in the Expo Go app.
 3. Run `./Start-PrivateBeta.ps1 -Mode Expo` in this folder. Keep the terminal open.
 4. Open the printed `exp://LAPTOP_IP:8383` address in Expo Go, or scan its QR code.
-   The browser fallback is `http://LAPTOP_IP:8001/`; the ecology desk adds `/officer`.
+   The browser fallback is `http://LAPTOP_IP:8001/`; management adds `/officer`.
 5. Privately open `backend/data/private-beta/local-accounts.json`. Sign into the
-   same BioGuard screen with either account: grounds opens the field workspace;
-   ecology opens management. On phones the management desk opens inside the app.
+   same BioGuard screen: grounds opens sightings, ecology opens assigned jobs,
+   management opens the dashboard. On phones the management desk opens inside the app.
    These are BioGuard accounts, separate from Expo.
-   Change both temporary passwords when prompted, then sign in again.
-6. The officer can create individual testers and teams in Staff & sites. Share each
+   Change generated temporary passwords when prompted, then sign in again.
+6. Management can create individual testers and teams in Staff & sites. Share each
    person's temporary access privately; do not distribute the seed credentials file.
 
 The current LAN IP can change after reconnecting. Restart the launcher to update it.
@@ -116,3 +116,13 @@ Download backup files from the laptop browser dashboard; embedded phone manageme
 shows a notice for those downloads. Physical iPhone/Android management login and
 sign-out still require device confirmation. Automated and browser verification
 used isolated synthetic accounts, not live reports.
+
+## Three-role update — October 17, 2026
+
+- One shared sign-in opens ground sightings, ecology field jobs or ecology management.
+- New work steps are inspection, removal and replanting; management approves plans and evidence, then assigns the next step or closes the ticket.
+- Existing reports/photos/history are preserved; older assignments require explicit ecology reassignment.
+- Verified: 94 backend tests, 35 client tests, mobile lint/typecheck, browser export and both native bundle exports.
+- Synthetic browser/API flow completed inspection, approved removal, approved replanting and management closure on one ticket. All three browser role entries and logout were checked.
+- Real iPhone/Android acceptance of this update remains pending. Bundle export does not establish physical-device success.
+- The existing beta launcher must be stopped and restarted to load these roles.

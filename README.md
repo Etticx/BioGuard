@@ -5,13 +5,13 @@
 Choose a plant photo, identify it with the supplied model, and see a suggested species.
 Identification stays temporary. Opening a report form after staff sign-in saves a local draft; submitting explicitly stores the report on the server.
 
-Both staff roles use one sign-in: ground accounts open the field workspace and ecology accounts open management. `/officer` remains an optional direct shortcut.
+All three roles use one sign-in: ground staff submit sightings, ecology staff open assigned jobs, and management opens the dashboard. `/officer` remains an optional direct shortcut.
 
 ## Project
 
 - **mobile/** — Expo SDK 57 / React Native, React Native Paper, light theme, system fonts.
 - **backend/** — FastAPI, the Keras model, protected local report storage and role accounts.
-- **web/** — local ecology-officer inbox and review dashboard.
+- **web/** — local ecology management inbox and review dashboard.
 - **bioguard_comparison_winner.zip** — active EfficientNetV2B0 model package.
 - **bioguard_model_package.zip** — original MobileNetV2 package, preserved unchanged.
 
@@ -43,45 +43,20 @@ becomes a confirmed invasive identification; comparison species are shown as
 **Not listed as invasive**, rather than a blanket claim about every location.
 
 
-## Ground team and ecology officer
+## Grounds, ecology and management
 
-The workflow has two roles:
+1. **Ground team** identifies or photographs a plant and submits a sighting with location and notes. My sightings shows its progress and any requests for more information.
+2. **Management** reviews the sighting and assigns an ecology team an **inspection**, **removal** or **replanting** job.
+3. **Ecology field team** accepts the job, records inspection findings or completed work, and sends dated photo evidence for management review. Evidence can be saved locally as a draft.
+4. **Management** requests changes, approves evidence and assigns the next step on the same ticket, or approves and closes it. No extra follow-up visit is compulsory.
 
-1. **Ground team:** identify a plant, tap **Report sighting**, sign in, and add the
-   site/block, nearby landmark, amount seen, observation date and optional note/overview photo.
-2. **Ecology officer:** open **http://127.0.0.1:8000/officer**, review the evidence,
-   confirm/correct the species, request more information, close without action, or
-   assign an inspection, monitoring, removal, planting or follow-up visit.
-3. **Ground team:** open **Team reports** in the app to see review requests and
-   approved removal, replacement-species and replanting instructions. Requested
-   additional photos can be submitted back to the same report.
-4. **Ground team:** start the visit, report problems or submit dated completion photos.
-   Save evidence as a draft if it needs to be finished later.
-5. **Ecology officer:** verify evidence, request corrections, arrange a separate
-   planting/follow-up visit, or reopen the action plan when regrowth is found.
+Removal requires confirmed species, invasive status and management-approved instructions. Replanting uses an approved replacement species and instructions. The model suggests identification; it never authorizes removal or chooses replacements.
 
-The officer chooses a replacement species appropriate to the site. The model never
-chooses replacement plants or authorizes removal. Officer confirmation is stored
-separately from the original model suggestion, confidence and model fingerprint.
+New installations generate random temporary credentials for `grounds`, `ecology` and `management`. Read the ignored `backend/data/local-accounts.json`, or `backend/data/private-beta/local-accounts.json` for the beta. Native tokens use SecureStore; browsers use an HTTP-only cookie. Management controls staff accounts, typed teams, sites and resets.
 
-On the first backend start, two local accounts (`grounds` and `ecology`) receive
-random passwords. Their details are written to **backend/data/local-accounts.json**
-on this computer. Open that ignored local file to sign in; do not commit or share it.
-Sessions expire after eight hours. Native tokens use SecureStore; browser phone sessions
-stay in memory. The officer dashboard uses an HTTP-only session cookie. Staff accounts,
-teams, sites and password resets are managed from the ecology desk.
+Submitted reports and photos persist in the ignored SQLite data directory. Ground staff can read their team's sightings; ecology teams see their own assignments and evidence; management reviews all tickets. Other teams cannot read private work photos or notes. Revisions and upload keys prevent stale changes and duplicate submissions.
 
-Submitted reports and protected photo evidence persist in **backend/data/bioguard.sqlite3**.
-The whole data directory is ignored by Git. Only the ecology officer and the reporting
-or assigned team can read a report and its photos. All review changes retain an activity
-history; stale reviews are rejected. A retry of the same submission does not create a
-second report. The server computes saved predictions instead of accepting a client claim.
-
-The local staff prototype includes completion evidence, officer verification, separate
-visits, regrowth/survival checks, in-app updates, draft recovery and backups. An assigned
-report does not claim that its field work has been completed. HTTPS hosting files and
-signed-build profiles are prepared; no website or signed build has been published.
-See PILOT_GUIDE.md for the remaining real-device and hosting checks.
+Existing officer roles migrate to management while keeping their IDs and history. Earlier ground-team jobs need explicit reassignment to ecology; retired work types remain readable in history. See LOCAL_START.md for the current local flow and PILOT_GUIDE.md for outstanding real-device and hosting checks. No website or signed build has been published.
 
 For a browser preview, export the app from `mobile/` with `npx expo export --platform web`,
 then run `./Start-Preview.ps1` from this folder. It serves http://localhost:8082/ with

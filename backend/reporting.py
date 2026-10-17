@@ -55,7 +55,7 @@ class Review(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
     revision: int = Field(ge=1)
     decision: Literal["assign", "no_action", "request_info", "cancel", "duplicate", "reopen"]
-    work_type: Literal["inspection", "monitoring", "removal", "replanting", "removal_replanting", "follow_up"] = "removal_replanting"
+    work_type: Literal["inspection", "removal", "replanting"] = "inspection"
     due_on: date | None = None
     priority: Literal["normal", "high"] = "normal"
     confirmed_species: str = Field(default="", max_length=160)
@@ -96,7 +96,7 @@ def user_from(request, role=None):
     if user.get("must_change_password") and request.url.path not in {"/auth/me", "/auth/password", "/auth/logout"}:
         raise HTTPException(403, "Change your temporary password before continuing.")
     if role and user["role"] != role:
-        raise HTTPException(403, "This action is for the ecology officer." if role == "officer" else "Use a ground-team account.")
+        raise HTTPException(403, {"management":"This action is for management.","ecology":"This action is for the ecology field team.","ground":"Use a ground-team account."}.get(role,"This account cannot perform this action."))
     return user
 
 
@@ -145,7 +145,7 @@ def me(request: Request):
 
 @router.get("/teams")
 def teams(request: Request):
-    user_from(request, "officer")
+    user_from(request, "management")
     return request.app.state.records.teams()
 
 
@@ -209,7 +209,7 @@ def photo(identifier: str, photo_id: str, request: Request):
 
 @router.post("/reports/{identifier}/review")
 def review(identifier: str, details: Review, request: Request):
-    user = user_from(request, "officer")
+    user = user_from(request, "management")
     try:
         result = request.app.state.records.review_report(identifier, user, details.model_dump(mode="json"))
     except RecordConflict as error:
@@ -250,7 +250,7 @@ def officer_page(request: Request):
     if request.headers.get("authorization"):
         if not request.headers["authorization"].startswith("Bearer "):
             raise HTTPException(401, "Sign in to continue.")
-        user_from(request, "officer")
+        user_from(request, "management")
         response.set_cookie(request.app.state.cookie_name, token_from(request), httponly=True, samesite="strict",
                             secure=os.environ.get("BIOGUARD_SECURE_COOKIES")=="1" or request.url.scheme == "https", max_age=8 * 3600)
     return response

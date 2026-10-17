@@ -11,18 +11,23 @@ def setup(tmp_path):
     api = create_app(Predictor, data_dir=tmp_path, seed_accounts=False)
     with TestClient(api) as client:
         records = api.state.records
-        team = records.add_user("grounds", "ground-test-password", "Ground team", "ground")
+        records.add_user("grounds", "ground-test-password", "Ground team", "ground")
+        records.add_user("field", "ecology-test-password", "Ecology field team", "ecology")
+        records.add_user("otherfield", "other-ecology-password", "Other ecology team", "ecology")
         other = records.add_user("other", "other-test-password", "Other team", "ground")
-        records.add_user("ecology", "officer-test-password", "Ecology officer", "officer")
+        records.add_user("management", "management-test-password", "Management", "management")
         def login(username, password):
             response = client.post("/auth/login", json={"username":username,"password":password})
             assert response.status_code == 200
             return {"Authorization":"Bearer " + response.json()["token"]}
         ground = login("grounds", "ground-test-password")
-        officer = login("ecology", "officer-test-password")
+        management = login("management", "management-test-password")
+        ecology = login("field", "ecology-test-password")
+        other_ecology = login("otherfield", "other-ecology-password")
+        team = records.session_user(ecology["Authorization"][7:])["team_id"]
         outsider = login("other", "other-test-password")
         client.cookies.clear()
-        yield client, ground, officer, outsider, team, api
+        yield client, ground, management, outsider, team, api, ecology, other_ecology
 
 
 def details(**changes):
@@ -36,21 +41,21 @@ def submit(client, ground, **changes):
 
 
 def assignment(team, revision=1, **changes):
-    return {"revision":revision,"decision":"assign","due_on":date.today().isoformat(),"confirmed_species":"Leucaena leucocephala",
-            "confirmed_invasive":True,"notes":"Verified by ecology officer", "assigned_team_id":team,
+    return {"revision":revision,"decision":"assign","work_type":"removal","due_on":date.today().isoformat(),"confirmed_species":"Leucaena leucocephala",
+            "confirmed_invasive":True,"notes":"Verified by management", "assigned_team_id":team,
             "removal_instructions":"Approved site-specific removal instructions",
-            "replacement_species":"Officer-selected replacement",
+            "replacement_species":"Management-selected replacement",
             "replanting_instructions":"Approved site-specific replanting instructions", **changes}
 
 
 def test_identification_does_not_persist_a_report(setup):
-    client, ground, officer, _, _, _ = setup
+    client, ground, management, _, _, _,ecology,other_ecology=setup
     assert client.post('/identify',content=photo_bytes(),headers={'Content-Type':'image/png'}).status_code==200
-    assert client.get('/reports',headers=officer).json()==[]
+    assert client.get('/reports',headers=management).json()==[]
 
 
 def test_submit_persists_evidence_and_model_provenance(setup):
-    client,ground,officer,_,_,api=setup
+    client,ground,management,_,_,api,ecology,other_ecology=setup
     response=submit(client,ground)
     assert response.status_code==201,response.text
     report=response.json()
@@ -58,8 +63,8 @@ def test_submit_persists_evidence_and_model_provenance(setup):
     assert report['prediction']['predicted_species']=='Mimosa pudica'
     assert report['model']['architecture']=='EfficientNetV2B0'
     assert report['reporter_name']=='Ground team'
-    assert client.get('/reports',headers=officer).json()[0]['id']==report['id']
-    photo=client.get(report['photos'][0]['url'],headers=officer)
+    assert client.get('/reports',headers=management).json()[0]['id']==report['id']
+    photo=client.get(report['photos'][0]['url'],headers=management)
     assert photo.content==photo_bytes(format='JPEG')
     assert photo.headers['content-type']=='image/jpeg'
     assert 'no-store' in photo.headers['cache-control']
@@ -71,9 +76,9 @@ def test_submit_persists_evidence_and_model_provenance(setup):
 
 
 def test_roles_and_photo_access_are_enforced(setup):
-    client,ground,officer,outsider,team,_=setup
+    client,ground,management,outsider,team,_,ecology,other_ecology=setup
     assert submit(client,{}).status_code==401
-    assert submit(client,officer).status_code==403
+    assert submit(client,management).status_code==403
     report=submit(client,ground).json()
     assert client.get('/reports').status_code==401
     assert client.get('/reports',headers=outsider).json()==[]
@@ -102,33 +107,34 @@ def test_invalid_or_forged_details_are_rejected(setup,change):
 
 
 @pytest.mark.parametrize('change',[{'confirmed_species':'Unknown'},{'confirmed_invasive':False},
-    {'replacement_species':''},{'removal_instructions':''},{'replanting_instructions':''},{'assigned_team_id':None}])
-def test_approval_needs_officer_confirmation_and_complete_work_plan(setup,change):
-    client,ground,officer,_,team,_=setup
+    {'work_type':'replanting','replacement_species':''},{'removal_instructions':''},{'work_type':'replanting','replanting_instructions':''},{'assigned_team_id':None}])
+def test_approval_needs_management_confirmation_and_complete_work_plan(setup,change):
+    client,ground,management,_,team,_,ecology,other_ecology=setup
     report=submit(client,ground).json()
-    assert client.post('/reports/'+report['id']+'/review',headers=officer,json=assignment(team,**change)).status_code==422
-    assert client.get('/reports/'+report['id'],headers=officer).json()['status']=='submitted'
+    assert client.post('/reports/'+report['id']+'/review',headers=management,json=assignment(team,**change)).status_code==422
+    assert client.get('/reports/'+report['id'],headers=management).json()['status']=='submitted'
 
 
 def test_assignment_preserves_model_suggestion_and_reaches_team(setup):
-    client,ground,officer,_,team,_=setup
+    client,ground,management,_,team,_,ecology,other_ecology=setup
     report=submit(client,ground).json()
-    response=client.post('/reports/'+report['id']+'/review',headers=officer,json=assignment(team))
+    response=client.post('/reports/'+report['id']+'/review',headers=management,json=assignment(team))
     assert response.status_code==200,response.text
     approved=response.json()
     assert approved['status']=='assigned' and approved['revision']==2
     assert approved['prediction']['predicted_species']=='Mimosa pudica'
     assert approved['review']['confirmed_species']=='Leucaena leucocephala'
-    assert approved['review']['replacement_species']=='Officer-selected replacement'
-    assert client.get('/reports',headers=ground).json()[0]['assigned_team_id']==team
-    assert client.post('/reports/'+report['id']+'/review',headers=officer,json=assignment(team)).status_code==409
+    assert approved['review']['replacement_species']=='Management-selected replacement'
+    assert client.get('/reports',headers=ecology).json()[0]['assigned_team_id']==team
+    assert client.get('/reports',headers=ground).json()[0]['work_items']==[]
+    assert client.post('/reports/'+report['id']+'/review',headers=management,json=assignment(team)).status_code==409
 
 
 def test_request_information_reply_and_close(setup):
-    client,ground,officer,outsider,_,_=setup
+    client,ground,management,outsider,_,_,ecology,other_ecology=setup
     report=submit(client,ground).json()
     review={'revision':1,'decision':'request_info','notes':'Please add a closer leaf photo.'}
-    response=client.post('/reports/'+report['id']+'/review',headers=officer,json=review)
+    response=client.post('/reports/'+report['id']+'/review',headers=management,json=review)
     assert response.status_code==200,response.text
     assert response.json()['status']=='needs_info'
     def reply(headers,revision):
@@ -141,7 +147,7 @@ def test_request_information_reply_and_close(setup):
     assert result.status_code==200,result.text
     assert result.json()['status']=='submitted' and len(result.json()['photos'])==2
     assert result.json()['prediction']==report['prediction']
-    closed=client.post('/reports/'+report['id']+'/review',headers=officer,
+    closed=client.post('/reports/'+report['id']+'/review',headers=management,
                        json={'revision':3,'decision':'no_action','confirmed_species':'Unknown','notes':'No approved removal needed.'})
     assert closed.status_code==200 and closed.json()['status']=='closed'
 
@@ -155,9 +161,9 @@ def test_bad_photo_does_not_save_any_report(setup):
 
 
 def test_logout_and_expired_sessions_are_revoked(setup):
-    client,ground,officer,_,_,api=setup
+    client,ground,management,_,_,api,ecology,other_ecology=setup
     assert client.post('/auth/logout',headers=ground).status_code==204
     assert client.get('/reports',headers=ground).status_code==401
     with api.state.records.connect() as db:
         db.execute('UPDATE sessions SET expires_at=0')
-    assert client.get('/reports',headers=officer).status_code==401
+    assert client.get('/reports',headers=management).status_code==401

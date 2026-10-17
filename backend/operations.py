@@ -39,15 +39,18 @@ class OperationsMixin:
                 CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY,value TEXT NOT NULL);
             """)
             additions={"users":{"team_id":"TEXT","active":"INTEGER NOT NULL DEFAULT 1","must_change_password":"INTEGER NOT NULL DEFAULT 0"},
-                       "reports":{"reporter_group_id":"TEXT","assigned_group_id":"TEXT"},"photos":{"work_id":"TEXT"}}
+                       "reports":{"reporter_group_id":"TEXT","assigned_group_id":"TEXT"},"photos":{"work_id":"TEXT"},"teams":{"role":"TEXT NOT NULL DEFAULT 'ground'"}}
             for table,columns in additions.items():
                 existing={row[1] for row in db.execute(f"PRAGMA table_info({table})")}
                 for column,definition in columns.items():
                     if column not in existing: db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
-            for user in db.execute("SELECT * FROM users WHERE role='ground' AND team_id IS NULL").fetchall():
+            # Migrate permissions by stored role, never by account name; IDs and sessions survive.
+            db.execute("UPDATE users SET role='management' WHERE role='officer'")
+            db.execute("UPDATE notices SET role='management' WHERE role='officer'")
+            for user in db.execute("SELECT * FROM users WHERE role IN ('ground','ecology') AND team_id IS NULL").fetchall():
                 name=user["display_name"]
                 if db.execute("SELECT id FROM teams WHERE name=?",(name,)).fetchone():name += " " + user["id"][:5]
-                db.execute("INSERT OR IGNORE INTO teams(id,name) VALUES (?,?)",(user["id"],name))
+                db.execute("INSERT OR IGNORE INTO teams(id,name,role) VALUES (?,?,?)",(user["id"],name,user["role"]))
                 db.execute("UPDATE users SET team_id=? WHERE id=?",(user["id"],user["id"]))
             db.execute("UPDATE reports SET reporter_group_id=(SELECT team_id FROM users WHERE id=reports.reporter_id) WHERE reporter_group_id IS NULL")
             db.execute("UPDATE reports SET assigned_group_id=(SELECT team_id FROM users WHERE id=reports.assigned_team_id) WHERE assigned_group_id IS NULL AND assigned_team_id IS NOT NULL")
@@ -58,27 +61,27 @@ class OperationsMixin:
                 work={**review,"work_type":"removal_replanting","due_on":None,"priority":"normal","completions":[],"verification":None,"history":[{"at":report["updated_at"],"action":"legacy_assignment_imported"}]}
                 db.execute("INSERT INTO work_items VALUES (?,?,?,?,?,?,?,?)",(uuid4().hex,report["id"],report["assigned_group_id"],"assigned",1,report["updated_at"],report["updated_at"],json.dumps(work)))
             empty=db.execute("SELECT COUNT(*) FROM users").fetchone()[0]==0
-            db.execute("INSERT OR REPLACE INTO metadata VALUES ('schema_version','2')")
+            db.execute("INSERT OR REPLACE INTO metadata VALUES ('schema_version','3')")
         if seed and empty:
             accounts=[]
-            for username,display,role in (("grounds","Ground team","ground"),("ecology","Ecology officer","officer")):
+            for username,display,role in (("grounds","Ground team","ground"),("ecology","Ecology field team","ecology"),("management","Management","management")):
                 password=secrets.token_urlsafe(15)
-                self.add_user(username,password,display,role,must_change=temporary_seed)
+                self.add_user(username,password,display,role,must_change=True)
                 accounts.append({"username":username,"password":password,"display_name":display,"role":role})
             (self.directory/"local-accounts.json").write_text(json.dumps(accounts,indent=2),"utf-8")
 
     def add_user(self, username, password, display_name, role, team_id=None, must_change=False):
         from records import password_hash
-        if role not in {"ground","officer"}:raise ValueError("Choose a ground-team or ecology-officer role.")
+        if role not in {"ground","ecology","management"}:raise ValueError("Choose ground, ecology or management.")
         username=username.strip().lower()
         if not username or len(username)>80 or len(password)<10:raise ValueError("Use a username and a password of at least 10 characters.")
         identifier,salt=uuid4().hex,secrets.token_hex(16)
         with self.connect() as db:
-            if role=="ground" and not team_id:
+            if role in {"ground","ecology"} and not team_id:
                 team_id=identifier
-                db.execute("INSERT INTO teams(id,name) VALUES (?,?)",(team_id,display_name+" "+identifier[:4] if db.execute("SELECT id FROM teams WHERE name=?",(display_name,)).fetchone() else display_name))
-            if role=="ground" and not db.execute("SELECT id FROM teams WHERE id=? AND active=1",(team_id,)).fetchone():raise ValueError("Choose an active team.")
-            try:db.execute("INSERT INTO users(id,username,display_name,role,salt,password_hash,team_id,must_change_password) VALUES (?,?,?,?,?,?,?,?)",(identifier,username,display_name,role,salt,password_hash(password,salt),team_id if role=="ground" else None,int(must_change)))
+                db.execute("INSERT INTO teams(id,name,role) VALUES (?,?,?)",(team_id,display_name+" "+identifier[:4] if db.execute("SELECT id FROM teams WHERE name=?",(display_name,)).fetchone() else display_name,role))
+            if role in {"ground","ecology"} and not db.execute("SELECT id FROM teams WHERE id=? AND active=1 AND role=?",(team_id,role)).fetchone():raise ValueError("Choose an active team matching this staff role.")
+            try:db.execute("INSERT INTO users(id,username,display_name,role,salt,password_hash,team_id,must_change_password) VALUES (?,?,?,?,?,?,?,?)",(identifier,username,display_name,role,salt,password_hash(password,salt),team_id if role in {"ground","ecology"} else None,int(must_change)))
             except sqlite3.IntegrityError as error:raise ValueError("That username is already in use.") from error
         return identifier
 
@@ -102,10 +105,15 @@ class OperationsMixin:
 
     def teams(self):
         with self.connect() as db:
-            return [{**dict(row),"display_name":row["name"]} for row in db.execute("SELECT teams.*,COUNT(users.id) AS members FROM teams LEFT JOIN users ON users.team_id=teams.id AND users.active=1 WHERE teams.active=1 GROUP BY teams.id ORDER BY teams.name")]
+            return [{**dict(row),"display_name":row["name"]} for row in db.execute("SELECT teams.*,COUNT(users.id) AS members FROM teams JOIN users ON users.team_id=teams.id AND users.active=1 AND users.role='ecology' WHERE teams.active=1 AND teams.role='ecology' GROUP BY teams.id ORDER BY teams.name")]
 
     def can_access(self, row, user):
-        return user["role"]=="officer" or row["reporter_id"]==user["id"] or bool(user.get("team_id") and user["team_id"] in (row["reporter_group_id"],row["assigned_group_id"]))
+        if user["role"]=="management":return True
+        if user["role"]=="ground":
+            return row["reporter_id"]==user["id"] or bool(user.get("team_id") and user["team_id"]==row["reporter_group_id"])
+        if user["role"]!="ecology" or not user.get("team_id"):return False
+        with self.connect() as db:
+            return bool(db.execute("SELECT work_items.id FROM work_items JOIN teams ON teams.id=work_items.team_id WHERE work_items.report_id=? AND work_items.team_id=? AND teams.role='ecology'",(row["id"],user["team_id"])).fetchone())
 
     def emit(self, db, key, report_id, message, role=None, team_id=None, user_id=None):
         db.execute("INSERT OR IGNORE INTO notices VALUES (?,?,?,?,?,?,?,?)",(uuid4().hex,key,report_id,role,team_id,user_id,message,now()))
@@ -117,10 +125,11 @@ class OperationsMixin:
         if group_id!="unchanged":db.execute("UPDATE reports SET assigned_group_id=? WHERE id=?",(group_id,row["id"]))
 
     def create_report(self,user,details,prediction,provenance,photos,request_key,digest):
+        if user["role"]!="ground":raise ValueError("Only the ground team can submit sightings.")
         result=super().create_report(user,details,prediction,provenance,photos,request_key,digest)
         with self.connect() as db:
             db.execute("UPDATE reports SET reporter_group_id=COALESCE(reporter_group_id,?) WHERE id=?",(user.get("team_id"),result["id"]))
-            self.emit(db,"submitted_"+result["id"],result["id"],"New sighting needs ecology review.",role="officer")
+            self.emit(db,"submitted_"+result["id"],result["id"],"New sighting needs management review.",role="management")
         return self.get_report(result["id"],user)
 
     def get_report(self,identifier,user):
@@ -132,13 +141,37 @@ class OperationsMixin:
             report["reporter_team_id"]=row["reporter_group_id"]
             report["work_items"]=[self.work_value(work,db) for work in db.execute("SELECT * FROM work_items WHERE report_id=? ORDER BY created_at",(identifier,))]
             report["photos"]=[{"id":p["id"],"kind":p["kind"],"work_id":p["work_id"],"url":f"/reports/{identifier}/photos/{p['id']}"} for p in db.execute("SELECT id,kind,work_id FROM photos WHERE report_id=? ORDER BY rowid",(identifier,))]
+        if user["role"]!="management":
+            # The complete audit remains stored; field evidence notes belong to its work team.
+            report["history"]=[event if event.get("action") in {"submitted","information_added"} else {key:value for key,value in event.items() if key!="notes"} for event in report.get("history",[])]
+        if user["role"]=="ground":
+            report["work_items"]=[]
+            report["photos"]=[photo for photo in report["photos"] if not photo["work_id"]]
+            review=report.get("review")
+            report["review"]={key:review.get(key) for key in ("decision","notes","reviewer_name")} if review and review.get("decision") in {"request_info","no_action"} else None
+        elif user["role"]=="ecology":
+            report["work_items"]=[work for work in report["work_items"] if work["team_id"]==user.get("team_id")]
+            for work in report["work_items"]:
+                verification=work.get("verification")
+                if verification and (verification.get("next_plan") or {}).get("assigned_team_id")!=user.get("team_id"):
+                    verification.pop("next_plan",None)
+            own={work["id"] for work in report["work_items"]}
+            report["photos"]=[photo for photo in report["photos"] if not photo["work_id"] or photo["work_id"] in own]
+            if (report.get("review") or {}).get("assigned_team_id")!=user.get("team_id"):report["review"]=None
         return report
+
+    def get_photo(self,report_id,photo_id,user):
+        report=self.get_report(report_id,user)
+        if not report or photo_id not in {photo["id"] for photo in report["photos"]}:return None
+        return super().get_photo(report_id,photo_id,user)
 
     def work_value(self,row,db):
         value=json.loads(row["data"])
         value.update({key:row[key] for key in ("id","report_id","team_id","status","revision","created_at","updated_at")})
-        team=db.execute("SELECT name FROM teams WHERE id=?",(row["team_id"],)).fetchone()
+        team=db.execute("SELECT name,role FROM teams WHERE id=?",(row["team_id"],)).fetchone()
         value["team_name"]=team[0] if team else "Former team"
+        value["legacy"]=value.get("work_type") not in {"inspection","removal","replanting"}
+        value["requires_reassignment"]=row["status"] not in TERMINAL and (not team or team["role"]!="ecology")
         value["overdue"]=bool(value.get("due_on") and value["due_on"]<field_today().isoformat() and row["status"] not in TERMINAL | {"awaiting_verification"})
         return value
 
@@ -149,7 +182,9 @@ class OperationsMixin:
         return [self.get_report(identifier,user) for identifier in identifiers]
 
     def new_work(self,db,report_id,team_id,plan,user):
-        if not db.execute("SELECT teams.id FROM teams JOIN users ON users.team_id=teams.id WHERE teams.id=? AND teams.active=1 AND users.active=1",(team_id,)).fetchone():raise ValueError("Choose an active team with at least one active member.")
+        if user["role"]!="management":raise ValueError("Only management can assign work.")
+        if plan.get("work_type") not in {"inspection","removal","replanting"}:raise ValueError("Choose inspection, removal or replanting.")
+        if not db.execute("SELECT teams.id FROM teams JOIN users ON users.team_id=teams.id WHERE teams.id=? AND teams.active=1 AND teams.role='ecology' AND users.active=1 AND users.role='ecology'",(team_id,)).fetchone():raise ValueError("Choose an active ecology team with at least one active ecology member.")
         identifier,timestamp=uuid4().hex,now()
         data={**plan,"completions":[],"verification":None,"history":[{"at":timestamp,"action":"assigned","by":user["display_name"]}]}
         db.execute("INSERT INTO work_items VALUES (?,?,?,?,?,?,?,?)",(identifier,report_id,team_id,"assigned",1,timestamp,timestamp,json.dumps(data)))
@@ -157,6 +192,7 @@ class OperationsMixin:
         return identifier
 
     def review_report(self,identifier,user,review):
+        if user["role"]!="management":raise ValueError("Only management can review reports.")
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row=db.execute("SELECT * FROM reports WHERE id=?",(identifier,)).fetchone()
@@ -169,7 +205,7 @@ class OperationsMixin:
                 self.new_work(db,identifier,review["assigned_team_id"],review,user)
                 team=db.execute("SELECT name FROM teams WHERE id=?",(review["assigned_team_id"],)).fetchone()
                 data["review"]={**review,"assigned_team_name":team[0],"reviewer_name":user["display_name"],"reviewed_at":now()}
-                self.event(db,row,data,"assigned",user,review["notes"],"follow_up" if review["work_type"]=="follow_up" else "assigned",review["assigned_team_id"])
+                self.event(db,row,data,"assigned",user,review["notes"],"assigned",review["assigned_team_id"])
             elif decision in {"cancel","duplicate"}:
                 if decision=="duplicate":
                     if db.execute("SELECT id FROM reports WHERE status='duplicate' AND json_extract(data,'$.duplicate_of')=?",(identifier,)).fetchone():raise ValueError("Other sightings link to this original. Reopen those duplicates before linking this case elsewhere.")
@@ -181,7 +217,7 @@ class OperationsMixin:
                     work_data=json.loads(current[0]);work_data["history"].append({"at":now(),"action":"cancelled","by":user["display_name"],"notes":review["notes"]})
                     db.execute("UPDATE work_items SET status='cancelled',revision=revision+1,updated_at=?,data=? WHERE id=?",(now(),json.dumps(work_data),work["id"]))
                 self.event(db,row,data,decision,user,review["notes"],"duplicate" if decision=="duplicate" else "cancelled")
-                if row["assigned_group_id"]:self.emit(db,f"cancel_{identifier}_{row['revision']}",identifier,"The officer cancelled or linked this case. Check the latest instructions.",team_id=row["assigned_group_id"])
+                if row["assigned_group_id"]:self.emit(db,f"cancel_{identifier}_{row['revision']}",identifier,"Management cancelled or linked this case. Check the latest instructions.",team_id=row["assigned_group_id"])
             elif decision=="reopen":
                 if active:conflict("This report already has an active visit.")
                 data.pop("duplicate_of",None)
@@ -191,19 +227,21 @@ class OperationsMixin:
                 status="closed" if decision=="no_action" else "needs_info"
                 data["review"]={**review,"reviewer_name":user["display_name"],"reviewed_at":now()}
                 self.event(db,row,data,status,user,review["notes"],status)
-                self.emit(db,f"review_{identifier}_{row['revision']}",identifier,"The ecology officer reviewed your report. "+("More information is needed." if status=="needs_info" else "No field work is required."),team_id=row["reporter_group_id"],user_id=None if row["reporter_group_id"] else row["reporter_id"])
+                self.emit(db,f"review_{identifier}_{row['revision']}",identifier,"Management reviewed your report. "+("More information is needed." if status=="needs_info" else "No field work is required."),team_id=row["reporter_group_id"],user_id=None if row["reporter_group_id"] else row["reporter_id"])
         return self.get_report(identifier,user)
 
     def revise_work(self,identifier,work_id,user,revision,plan):
+        if user["role"]!="management":raise ValueError("Only management can revise work.")
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row=db.execute("SELECT * FROM reports WHERE id=?",(identifier,)).fetchone()
             work=db.execute("SELECT * FROM work_items WHERE id=? AND report_id=?",(work_id,identifier)).fetchone()
             if not row or not work:return None
-            if work["revision"]!=revision or work["status"] not in {"assigned","in_progress","blocked","correction_requested"}:conflict("This visit changed or is awaiting verification. Refresh it first.")
+            if work["revision"]!=revision or work["status"] not in {"assigned","accepted","in_progress","blocked","correction_requested"}:conflict("This visit changed or is awaiting verification. Refresh it first.")
             team_id=plan["assigned_team_id"]
-            if not db.execute("SELECT teams.id FROM teams JOIN users ON users.team_id=teams.id WHERE teams.id=? AND teams.active=1 AND users.active=1",(team_id,)).fetchone():raise ValueError("Choose a staffed, active team.")
+            if not db.execute("SELECT teams.id FROM teams JOIN users ON users.team_id=teams.id WHERE teams.id=? AND teams.active=1 AND teams.role='ecology' AND users.active=1 AND users.role='ecology'",(team_id,)).fetchone():raise ValueError("Choose a staffed, active ecology team.")
             data=json.loads(work["data"])
+            if data.get("work_type") not in {"inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Cancel it and assign a new visit.")
             if data["completions"] and data["work_type"] != plan["work_type"]:
                 raise ValueError("Keep the visit type after evidence has been submitted. Cancel and create a new visit to change it.")
             previous_team=work["team_id"]
@@ -211,43 +249,62 @@ class OperationsMixin:
             data["history"].append({"at":now(),"action":"instructions_revised","by":user["display_name"],"notes":plan["notes"]})
             db.execute("UPDATE work_items SET team_id=?,status='assigned',revision=revision+1,updated_at=?,data=? WHERE id=?",(team_id,now(),json.dumps(data),work_id))
             report_data=json.loads(row["data"]);report_data["review"]={**plan,"reviewer_name":user["display_name"],"reviewed_at":now()}
-            self.event(db,row,report_data,"work_revised",user,plan["notes"],"follow_up" if plan["work_type"]=="follow_up" else "assigned",team_id)
+            self.event(db,row,report_data,"work_revised",user,plan["notes"],"assigned",team_id)
             self.emit(db,f"revised_{work_id}_{revision}",identifier,"Your team's visit instructions have changed.",team_id=team_id)
             if previous_team!=team_id:
                 self.emit(db,f"reassigned_{work_id}_{revision}",None,"A visit previously assigned to your team has been reassigned.",team_id=previous_team)
         return self.get_report(identifier,user)
 
     def progress_work(self,identifier,work_id,user,revision,action,notes):
+        if user["role"]!="ecology":raise ValueError("Only the ecology field team can update work.")
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             work=db.execute("SELECT * FROM work_items WHERE id=? AND report_id=?",(work_id,identifier)).fetchone()
             if not work or work["team_id"]!=user.get("team_id"):return None
-            if work["revision"]!=revision or work["status"] not in {"assigned","in_progress","correction_requested","blocked"}:conflict("Refresh this visit before updating it.")
-            data=json.loads(work["data"]);status="blocked" if action=="blocked" else "in_progress"
+            if not db.execute("SELECT teams.id FROM teams JOIN users ON users.team_id=teams.id WHERE teams.id=? AND teams.role='ecology' AND teams.active=1 AND users.id=? AND users.role='ecology' AND users.active=1",(work["team_id"],user["id"])).fetchone():return None
+            if work["revision"]!=revision or work["status"] not in {"assigned","accepted","in_progress","correction_requested","blocked"}:conflict("Refresh this visit before updating it.")
+            data=json.loads(work["data"])
+            if data.get("work_type") not in {"inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Ask management for a new assignment.")
+            if action=="accept":
+                if work["status"]!="assigned":conflict("This job has already been accepted. Refresh it.")
+                status="accepted"
+            elif action=="start":
+                if work["status"]=="assigned":conflict("Accept this job before starting work.")
+                status="in_progress"
+            elif action=="blocked":
+                if work["status"]=="assigned":conflict("Accept this job before updating it.")
+                status="blocked"
+            else:raise ValueError("Choose accept, start or blocked.")
             data["history"].append({"at":now(),"action":status,"by":user["display_name"],"notes":notes})
             db.execute("UPDATE work_items SET status=?,revision=revision+1,updated_at=?,data=? WHERE id=?",(status,now(),json.dumps(data),work_id))
             row=db.execute("SELECT * FROM reports WHERE id=?",(identifier,)).fetchone()
-            self.event(db,row,json.loads(row["data"]),status,user,notes,status)
-            if action=="blocked":self.emit(db,f"blocked_{work_id}_{revision}",identifier,"A team reported a problem with its assigned visit.",role="officer")
+            self.event(db,row,json.loads(row["data"]),status,user,notes,"assigned" if status=="accepted" else status)
+            if action=="blocked":self.emit(db,f"blocked_{work_id}_{revision}",identifier,"A team reported a problem with its assigned visit.",role="management")
         return self.get_report(identifier,user)
 
     def complete_work(self,identifier,work_id,user,details,photos,digest):
+        if user["role"]!="ecology":raise ValueError("Only the ecology field team can submit work evidence.")
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             work=db.execute("SELECT * FROM work_items WHERE id=? AND report_id=?",(work_id,identifier)).fetchone()
             if not work or work["team_id"]!=user.get("team_id"):return None
+            if not db.execute("SELECT teams.id FROM teams JOIN users ON users.team_id=teams.id WHERE teams.id=? AND teams.role='ecology' AND teams.active=1 AND users.id=? AND users.role='ecology' AND users.active=1",(work["team_id"],user["id"])).fetchone():return None
             data=json.loads(work["data"])
             previous=next((item for item in data["completions"] if item["request_key"]==details["request_key"]),None)
             if previous:
                 if previous["digest"]!=digest:conflict("This evidence submission key was already used for different content.")
                 return self.get_report(identifier,user)
-            if work["revision"]!=details["revision"] or work["status"] not in {"assigned","in_progress","correction_requested","blocked"}:conflict("This visit changed. Refresh it before submitting evidence.")
+            if work["revision"]!=details["revision"] or work["status"] not in {"accepted","in_progress","correction_requested","blocked"}:conflict("This visit changed. Refresh it before submitting evidence.")
             kind=data["work_type"];stage=details["stage"]
+            if kind not in {"inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Ask management for a new assignment.")
+            if kind=="inspection" and (not details.get("suggested_species") or not details.get("recommended_action")):raise ValueError("Record the inspected species and recommended next action.")
+            if kind=="inspection" and details.get("recommended_action")=="removal" and not details.get("removal_recommendation"):raise ValueError("Describe the recommended removal plan for management review.")
+            if kind=="inspection" and details.get("recommended_action")=="replanting" and not details.get("replacement_recommendation"):raise ValueError("Describe the recommended replacement planting for management review.")
             if kind=="removal" and stage!="removal" or kind=="replanting" and stage!="replanting" or kind=="removal_replanting" and stage not in {"removal","both"} or kind in {"inspection","monitoring","follow_up"} and stage!="observation":raise ValueError("Choose the evidence stage for this visit.")
             if stage in {"removal","both"} and (not details.get("removed_on") or not details.get("removal_complete")):raise ValueError("Confirm the removal date and completion.")
             if stage in {"replanting","both"}:
                 if not details.get("planted_on") or not details.get("planted_species") or (details.get("quantity") or 0)<1:raise ValueError("Record the planted species, quantity and date.")
-                if details["planted_species"].strip().casefold()!=data.get("replacement_species","").strip().casefold():raise ValueError("Use the officer-approved replacement species, or report a problem to request a changed plan.")
+                if details["planted_species"].strip().casefold()!=data.get("replacement_species","").strip().casefold():raise ValueError("Use the management-approved replacement species, or report a problem to request a changed plan.")
             if kind=="replanting" and data.get("previous_work_id"):
                 earlier=db.execute("SELECT data FROM work_items WHERE id=? AND report_id=?",(data["previous_work_id"],identifier)).fetchone()
                 removed_on=json.loads(earlier[0])["completions"][-1].get("removed_on") if earlier else None
@@ -261,46 +318,60 @@ class OperationsMixin:
             db.execute("UPDATE work_items SET status='awaiting_verification',revision=revision+1,updated_at=?,data=? WHERE id=?",(now(),json.dumps(data),work_id))
             row=db.execute("SELECT * FROM reports WHERE id=?",(identifier,)).fetchone()
             self.event(db,row,json.loads(row["data"]),"evidence_submitted",user,details["notes"],"awaiting_verification")
-            self.emit(db,f"evidence_{work_id}_{details['request_key']}",identifier,"Visit evidence is ready for ecology verification.",role="officer")
+            self.emit(db,f"evidence_{work_id}_{details['request_key']}",identifier,"Visit evidence is ready for management review.",role="management")
         return self.get_report(identifier,user)
 
     def verify_work(self,identifier,work_id,user,details):
+        if user["role"]!="management":raise ValueError("Only management can verify field work.")
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             work=db.execute("SELECT * FROM work_items WHERE id=? AND report_id=?",(work_id,identifier)).fetchone()
             if not work:return None
             if work["revision"]!=details["revision"] or work["status"]!="awaiting_verification":conflict("This visit is no longer awaiting this verification. Refresh it.")
-            data=json.loads(work["data"]);last=data["completions"][-1];decision=details["decision"]
-            partial=data["work_type"]=="removal_replanting" and last["stage"]=="removal"
-            next_date=details.get("next_visit_on")
-            if decision=="accept" and data["work_type"]=="follow_up" and last.get("regrowth")=="yes" and not next_date:
-                raise ValueError("Regrowth needs another visit, or reopen this case for a revised action plan.")
-            if decision=="accept" and partial and not next_date:raise ValueError("Schedule the remaining replanting visit.")
-            if decision=="accept" and not partial and data["work_type"] in {"removal","replanting","removal_replanting"} and not next_date and not details.get("no_followup_reason"):raise ValueError("Schedule a follow-up or explain why none is needed.")
+            data=json.loads(work["data"])
+            if data.get("work_type") not in {"inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Cancel it and create a new assignment.")
+            if not data.get("completions"):raise ValueError("This visit has no evidence to review.")
+            row=db.execute("SELECT * FROM reports WHERE id=?",(identifier,)).fetchone()
+            next_plan=details.get("next_plan")
+            if next_plan and next_plan["revision"]!=row["revision"]:conflict("This report changed. Refresh before approving the next plan.")
+            if next_plan and next_plan.get("decision")!="assign":raise ValueError("Choose assignment for the next plan.")
+            decision=details["decision"]
             status="correction_requested" if decision=="corrections" else "verified"
             data["verification"]={**details,"verified_by":user["display_name"],"verified_at":now()}
             data["history"].append({"at":now(),"action":status,"by":user["display_name"],"notes":details["notes"]})
             db.execute("UPDATE work_items SET status=?,revision=revision+1,updated_at=?,data=? WHERE id=?",(status,now(),json.dumps(data),work_id))
-            row=db.execute("SELECT * FROM reports WHERE id=?",(identifier,)).fetchone();report_data=json.loads(row["data"])
+            report_data=json.loads(row["data"])
+            next_team=work["team_id"]
             if decision=="corrections":
                 parent="assigned"
-                self.emit(db,f"correction_{work_id}_{work['revision']}",identifier,"The officer requested corrections to your visit evidence.",team_id=work["team_id"])
+                self.emit(db,f"correction_{work_id}_{work['revision']}",identifier,"Management requested changes to your visit evidence.",team_id=work["team_id"])
             elif decision=="reopen":parent="submitted"
-            elif next_date:
+            elif next_plan:
+                plan={**next_plan,"previous_work_id":work_id}
+                next_team=plan["assigned_team_id"]
+                self.new_work(db,identifier,next_team,plan,user)
+                team=db.execute("SELECT name FROM teams WHERE id=?",(next_team,)).fetchone()
+                report_data["review"]={**plan,"assigned_team_name":team[0],"reviewer_name":user["display_name"],"reviewed_at":now()}
+                parent="assigned"
+            elif details.get("next_visit_on"):
+                # Compatibility for older clients: create only an explicit approved type.
+                kind="replanting" if data["work_type"]=="removal" else "inspection"
                 plan={key:data.get(key,"") for key in ("confirmed_species","confirmed_invasive","removal_instructions","replacement_species","replanting_instructions")}
-                plan.update({"work_type":"replanting" if partial else "follow_up","due_on":next_date,"priority":data.get("priority","normal"),"notes":details["notes"],"previous_work_id":work_id})
-                self.new_work(db,identifier,details.get("assigned_team_id") or work["team_id"],plan,user)
-                parent="assigned" if partial else "follow_up"
+                if kind=="replanting" and not all((plan["replacement_species"],plan["replanting_instructions"])):raise ValueError("Approve replacement species and planting instructions in the next plan.")
+                plan.update({"work_type":kind,"due_on":details["next_visit_on"],"priority":data.get("priority","normal"),"notes":details["notes"],"previous_work_id":work_id})
+                next_team=details.get("assigned_team_id") or work["team_id"]
+                self.new_work(db,identifier,next_team,plan,user)
+                parent="assigned"
             else:parent="completed"
             if decision!="corrections":
-                self.emit(db,f"verified_{work_id}_{work['revision']}",identifier,"The ecology officer verified your visit. "+("This case is complete." if parent=="completed" else "Check the next instructions."),team_id=work["team_id"])
-            self.event(db,row,report_data,"verification_"+decision,user,details["notes"],parent,details.get("assigned_team_id") or work["team_id"])
+                self.emit(db,f"verified_{work_id}_{work['revision']}",identifier,"Management approved your evidence. "+("This case is complete." if parent=="completed" else "Check the next instructions."),team_id=work["team_id"])
+            self.event(db,row,report_data,"verification_"+decision,user,details["notes"],parent,next_team)
         return self.get_report(identifier,user)
 
     def add_information(self,*args,**kwargs):
         result=super().add_information(*args,**kwargs)
         if result:
-            with self.connect() as db:self.emit(db,f"information_{result['id']}_{result['revision']}",result["id"],"Additional sighting evidence needs review.",role="officer")
+            with self.connect() as db:self.emit(db,f"information_{result['id']}_{result['revision']}",result["id"],"Additional sighting evidence needs review.",role="management")
         return result
 
     def notifications(self,user):
@@ -308,8 +379,8 @@ class OperationsMixin:
             for work in db.execute("SELECT * FROM work_items WHERE status NOT IN ('verified','cancelled','awaiting_verification')").fetchall():
                 data=json.loads(work["data"])
                 if data.get("due_on") and data["due_on"]<field_today().isoformat():
-                    for audience in ("officer","team"):
-                        self.emit(db,"overdue_"+work["id"]+audience,work["report_id"],"A field visit is overdue.",role="officer" if audience=="officer" else None,team_id=work["team_id"] if audience=="team" else None)
+                    for audience in ("management","team"):
+                        self.emit(db,"overdue_"+work["id"]+audience,work["report_id"],"A field visit is overdue.",role="management" if audience=="management" else None,team_id=work["team_id"] if audience=="team" else None)
             rows=db.execute("""SELECT n.*,r.read_at FROM notices n LEFT JOIN notice_reads r ON r.notice_id=n.id AND r.user_id=?
                 WHERE n.role=? OR n.user_id=? OR (n.team_id IS NOT NULL AND n.team_id=?) ORDER BY n.created_at DESC LIMIT 100""",(user["id"],user["role"],user["id"],user.get("team_id"))).fetchall()
         return [dict(row) for row in rows if not row["report_id"] or self.get_report(row["report_id"],user)]
@@ -370,8 +441,8 @@ class OperationsMixin:
             db.execute("BEGIN IMMEDIATE")
             target=db.execute("SELECT * FROM users WHERE id=?",(identifier,)).fetchone()
             if not target:return False
-            if not active and target["role"]=="officer" and db.execute("SELECT COUNT(*) FROM users WHERE active=1 AND role='officer'").fetchone()[0]<=1:raise ValueError("Keep at least one active ecology officer.")
-            if not active and target["team_id"] and db.execute("SELECT COUNT(*) FROM users WHERE active=1 AND team_id=? AND id!=?",(target["team_id"],identifier)).fetchone()[0]==0 and db.execute("SELECT id FROM work_items WHERE team_id=? AND status NOT IN ('verified','cancelled')",(target["team_id"],)).fetchone():raise ValueError("Reassign or cancel this team's active work before disabling its last member.")
+            if not active and target["role"]=="management" and db.execute("SELECT COUNT(*) FROM users WHERE active=1 AND role='management'").fetchone()[0]<=1:raise ValueError("Keep at least one active management account.")
+            if not active and target["team_id"] and db.execute("SELECT COUNT(*) FROM users WHERE active=1 AND role=? AND team_id=? AND id!=?",(target["role"],target["team_id"],identifier)).fetchone()[0]==0 and db.execute("SELECT id FROM work_items WHERE team_id=? AND status NOT IN ('verified','cancelled')",(target["team_id"],)).fetchone():raise ValueError("Reassign or cancel this team's active work before disabling its last member.")
             db.execute("UPDATE users SET active=? WHERE id=?",(int(active),identifier))
             if not active:db.execute("DELETE FROM sessions WHERE user_id=?",(identifier,))
         self.audit(actor,"user_enabled" if active else "user_disabled",identifier)
@@ -391,7 +462,7 @@ class OperationsMixin:
                 if not block:raise HTTPException(422,"Choose a block belonging to this site.")
                 details["block_name"]=block["name"]
 
-    def add_catalog(self,actor,kind,name,site_id=None):
+    def add_catalog(self,actor,kind,name,site_id=None,role="ecology"):
         if kind not in {"teams","sites","blocks"}:raise ValueError("Unknown list.")
         name=name.strip()
         if not name or len(name)>100:raise ValueError("Use a name between 1 and 100 characters.")
@@ -401,10 +472,13 @@ class OperationsMixin:
                 if kind=="blocks":
                     if not db.execute("SELECT id FROM sites WHERE id=? AND active=1",(site_id,)).fetchone():raise ValueError("Choose an active site.")
                     db.execute("INSERT INTO blocks(id,site_id,name) VALUES (?,?,?)",(identifier,site_id,name))
+                elif kind=="teams":
+                    if role not in {"ground","ecology"}:raise ValueError("Choose a ground or ecology team.")
+                    db.execute("INSERT INTO teams(id,name,role) VALUES (?,?,?)",(identifier,name,role))
                 else:db.execute(f"INSERT INTO {kind}(id,name) VALUES (?,?)",(identifier,name))
         except sqlite3.IntegrityError as error:raise ValueError("That name already exists in this list.") from error
         self.audit(actor,kind+"_created",identifier)
-        return {"id":identifier,"name":name}
+        return {"id":identifier,"name":name,**({"role":role} if kind=="teams" else {})}
 
     def set_catalog_active(self,actor,kind,identifier,active):
         if kind not in {"teams","sites","blocks"}:raise ValueError("Unknown list.")

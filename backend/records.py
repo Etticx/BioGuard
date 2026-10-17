@@ -63,7 +63,8 @@ class BaseRecords:
         if seed and empty:
             accounts = []
             for username, display, role in (("grounds", "Ground team", "ground"),
-                                             ("ecology", "Ecology officer", "officer")):
+                                             ("ecology", "Ecology field team", "ecology"),
+                                             ("management", "Management", "management")):
                 password = secrets.token_urlsafe(15)
                 self.add_user(username, password, display, role)
                 accounts.append({"username": username, "password": password,
@@ -71,7 +72,7 @@ class BaseRecords:
             (self.directory / "local-accounts.json").write_text(json.dumps(accounts, indent=2), "utf-8")
 
     def add_user(self, username, password, display_name, role):
-        if role not in {"ground", "officer"}:
+        if role not in {"ground", "ecology", "management"}:
             raise ValueError("Unknown role")
         identifier, salt = uuid4().hex, secrets.token_hex(16)
         with self.connect() as db:
@@ -118,7 +119,7 @@ class BaseRecords:
 
     def teams(self):
         with self.connect() as db:
-            return [self.public_user(row) for row in db.execute("SELECT * FROM users WHERE role='ground' ORDER BY display_name")]
+            return [self.public_user(row) for row in db.execute("SELECT * FROM users WHERE role='ecology' ORDER BY display_name")]
 
     def create_report(self, user, details, prediction, provenance, photos, request_key, digest):
         with self.connect() as db:
@@ -154,7 +155,7 @@ class BaseRecords:
 
     def list_reports(self, user):
         with self.connect() as db:
-            if user["role"] == "officer":
+            if user["role"] == "management":
                 rows = db.execute("SELECT id FROM reports ORDER BY created_at DESC").fetchall()
             else:
                 rows = db.execute("SELECT id FROM reports WHERE reporter_id=? OR assigned_team_id=? ORDER BY created_at DESC",
@@ -177,8 +178,8 @@ class BaseRecords:
             if row["revision"] != review["revision"] or row["status"] not in {"submitted", "needs_info"}:
                 raise RecordConflict("This report has changed. Refresh it before reviewing.")
             team_id = review.get("assigned_team_id") if review["decision"] == "assign" else None
-            if team_id and not db.execute("SELECT id FROM users WHERE id=? AND role='ground'", (team_id,)).fetchone():
-                raise ValueError("Choose an existing ground team.")
+            if team_id and not db.execute("SELECT id FROM users WHERE id=? AND role='ecology'", (team_id,)).fetchone():
+                raise ValueError("Choose an existing ecology team.")
             status = {"assign": "assigned", "no_action": "closed", "request_info": "needs_info"}[review["decision"]]
             timestamp, data = now(), json.loads(row["data"])
             data["review"] = {**review, "reviewer_name": user["display_name"], "reviewed_at": timestamp}

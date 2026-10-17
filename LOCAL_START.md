@@ -43,7 +43,7 @@ If you do not need Expo Go, run this instead:
 ```
 
 Then open **[BioGuard](http://localhost:8001/)** and sign in. Your account opens
-the appropriate workspace: ground team or management. The direct
+the appropriate workspace: ground team, ecology field team or management.
 
 Choose **one mode**. To switch, stop the current launcher with Ctrl+C, then run
 the other command. Rebuilding does not erase the beta's saved reports.
@@ -56,7 +56,7 @@ the other command. Rebuilding does not erase the beta's saved reports.
 4. If the terminal does not show a QR, use the development server listed in Expo Go,
    or enter `exp://LAPTOP_IP:8383` if your app offers manual URL entry.
 5. At BioGuard's shared sign-in screen, use your **BioGuard staff account**.
-   Ground staff open the field app; ecology staff open management inside the app.
+   Ground staff submit sightings; ecology staff open My jobs; management opens the dashboard.
 6. Try camera and gallery, identify a photo, then send a clearly labelled test report.
 
 Android testing is still pending in this project; these are startup instructions,
@@ -70,8 +70,8 @@ not a claim that a physical Android phone has passed the checklist.
    expo.dev in Safari alone does not sign into the Expo Go app.
 4. Use the iPhone's Camera app to scan the current Expo QR, then tap **Open in Expo Go**.
    Alternatively, tap the matching development server on Expo Go's Home screen.
-5. Sign into BioGuard with your staff account. Ground staff open the field app;
-   ecology staff open management inside the app using the same session.
+5. Sign into BioGuard with your staff account. Ground staff submit sightings;
+   ecology staff open My jobs; management opens the dashboard.
 6. For the ground-team flow, try camera/gallery.
 
 If the laptop needs Expo sign-in again, open a second PowerShell terminal in BioGuard:
@@ -97,14 +97,14 @@ While either beta mode is running, open:
 
 **[http://localhost:8001/](http://localhost:8001/)**
 
-Use the same sign-in screen for both roles. **ecology** opens management;
-**grounds** opens the field workspace. You do not need to choose a role or remember
+Use the same sign-in screen for all three roles. **management** opens the dashboard;
+**ecology** opens assigned field jobs; **grounds** opens sightings. You do not need to choose a role or remember
 a different link. `/officer` remains a direct shortcut and also routes signed-in
-ground staff to their workspace. These BioGuard accounts are separate from Expo.
+field staff to their workspace. These BioGuard accounts are separate from Expo.
 
 Current local test access is recorded privately in
 `backend/data/private-beta/local-accounts.json`. Passwords are intentionally not
-copied into this versioned guide. If an account was later reset by an officer, use
+copied into this versioned guide. If an account was later reset by management, use
 its newly issued password instead. A new beta installation generates temporary
 passwords and asks staff to change them.
 
@@ -115,10 +115,10 @@ The phone and dashboard must use the same beta server to see the same reports.
 ### Current private beta — use these
 
 - [BioGuard shared sign-in](http://localhost:8001/) — automatically opens your
-  ground-team or ecology workspace after sign-in.
-- [Management shortcut](http://localhost:8001/officer) — ecology workspace;
-  ground accounts are routed to the field app.
-- [Team reports](http://localhost:8001/team) — ground-team reports and visits.
+  ground, ecology field or management workspace after sign-in.
+- [Management shortcut](http://localhost:8001/officer) — management workspace;
+  ground and ecology accounts are routed to their own app.
+- [Team reports](http://localhost:8001/team) — sightings for ground staff; assigned jobs for ecology staff.
 - [Drafts and uploads](http://localhost:8001/drafts) — drafts on that browser/device.
 - [Updates](http://localhost:8001/updates) — staff notices.
 - [About this beta](http://localhost:8001/beta-information) — test/privacy information.
@@ -213,3 +213,16 @@ This setup is for private local testing. Phones depend on the laptop and network
 it is not an independently installed APK, a TestFlight release or public hosting.
 See [PRIVATE_BETA.md](PRIVATE_BETA.md) for the beta checklist and
 [PILOT_GUIDE.md](PILOT_GUIDE.md) for the full workflow.
+
+## Three-role ticket flow
+
+1. Grounds submits a sighting with a photo and location.
+2. Management reviews it and assigns an ecology team an inspection, removal or replanting job.
+3. Ecology accepts the job, records findings or completed work, and sends photo evidence for review.
+4. Management requests changes, approves and assigns the next step, or approves and closes the ticket.
+
+Removal requires management confirmation of the species and invasive status plus approved instructions.
+Replacement planting uses the approved species and instructions. Evidence upload never closes a ticket automatically.
+Existing visits and evidence remain in history. Older assignments to ground teams require explicit reassignment; retired visit types are read-only.
+
+After a role update, stop the beta launcher with Ctrl+C, restart it and sign in again. Local testing account details remain in the ignored local-accounts.json file.
