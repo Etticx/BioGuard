@@ -99,8 +99,8 @@ While either beta mode is running, open:
 
 Use the same sign-in screen for all three roles. **management** opens the dashboard;
 **ecology** opens assigned field jobs; **grounds** opens sightings. You do not need to choose a role or remember
-a different link. `/officer` remains a direct shortcut and also routes signed-in
-field staff to their workspace. These BioGuard accounts are separate from Expo.
+a different link. Logging out returns to this same shared sign-in. These BioGuard
+accounts are separate from Expo.
 
 Current local test access is recorded privately in
 `backend/data/private-beta/local-accounts.json`. Passwords are intentionally not
@@ -116,11 +116,10 @@ The phone and dashboard must use the same beta server to see the same reports.
 
 - [BioGuard shared sign-in](http://localhost:8001/) — automatically opens your
   ground, ecology field or management workspace after sign-in.
-- [Management shortcut](http://localhost:8001/officer) — management workspace;
-  ground and ecology accounts are routed to their own app.
 - [Team reports](http://localhost:8001/team) — sightings for ground staff; assigned jobs for ecology staff.
 - [Drafts and uploads](http://localhost:8001/drafts) — drafts on that browser/device.
 - [Updates](http://localhost:8001/updates) — staff notices.
+- [Settings](http://localhost:8001/settings) — account details and password changes for field staff.
 - [About this beta](http://localhost:8001/beta-information) — test/privacy information.
 - [Server health](http://localhost:8001/health) — model availability and beta status.
 - `exp://LAPTOP_IP:8383` — open the native app in Expo Go; **Expo mode only**.
@@ -226,3 +225,8 @@ Replacement planting uses the approved species and instructions. Evidence upload
 Existing visits and evidence remain in history. Older assignments to ground teams require explicit reassignment; retired visit types are read-only.
 
 After a role update, stop the beta launcher with Ctrl+C, restart it and sign in again. Local testing account details remain in the ignored local-accounts.json file.
+
+## Shared sign-in and field navigation
+
+All roles return to the same `/` sign-in after logout or session expiry. An old management shortcut redirects to that shared entry when signed out.
+Ground staff keep Settings and Log out on their home screen; My sightings contains report tools only. Ecology staff use My jobs as their home, with Settings and Log out there. Change password is inside Settings. Drafts and Updates return to the appropriate sightings/jobs screen.

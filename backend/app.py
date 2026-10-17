@@ -168,6 +168,7 @@ def create_app(predictor_factory=None, data_dir=None, seed_accounts=True, privat
         @api.get("/report",include_in_schema=False)
         @api.get("/drafts",include_in_schema=False)
         @api.get("/updates",include_in_schema=False)
+        @api.get("/settings",include_in_schema=False)
         def mobile_page():return FileResponse(mobile_dist/"index.html")
         if (mobile_dist/"_expo").is_dir():api.mount("/_expo",StaticFiles(directory=mobile_dist/"_expo"),name="expo-assets")
         if (mobile_dist/"assets").is_dir():api.mount("/assets",StaticFiles(directory=mobile_dist/"assets"),name="mobile-assets")

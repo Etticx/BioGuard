@@ -9,7 +9,7 @@ import os
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from PIL import Image
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 from starlette.concurrency import run_in_threadpool
@@ -253,4 +253,8 @@ def officer_page(request: Request):
         user_from(request, "management")
         response.set_cookie(request.app.state.cookie_name, token_from(request), httponly=True, samesite="strict",
                             secure=os.environ.get("BIOGUARD_SECURE_COOKIES")=="1" or request.url.scheme == "https", max_age=8 * 3600)
+    else:
+        user=request.app.state.records.session_user(token_from(request))
+        if not user or user["role"]!="management" or user.get("must_change_password"):
+            return RedirectResponse("/",status_code=303,headers={"Cache-Control":"no-store"})
     return response
