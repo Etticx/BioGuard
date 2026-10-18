@@ -25,3 +25,9 @@ mobile/.beta-check-dist/
 
 # Disposable test output
 /review/pytest-password-review/
+
+# Local configuration and signing credentials
+.env
+.env.*
+!.env.example
+mobile/credentials.json

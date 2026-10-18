@@ -1,0 +1,27 @@
+# Cloud mobile build archive; separate from Git source tracking.
+.git
+**/.git
+**/node_modules/
+**/.expo/
+**/.beta-dist/
+**/.beta-check-dist/
+**/.three-role-native-check/
+**/dist/
+/backend/
+/review/
+/colab/
+/field-tests/
+/output/
+*.zip
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+**/credentials.json
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+*.log

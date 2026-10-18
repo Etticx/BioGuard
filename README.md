@@ -23,7 +23,7 @@ If Git reports conflicting/local changes, ask the team before changing or deleti
 
 **Without Git:** open the GitHub page -> Code -> Download ZIP -> Extract All. Open the extracted project folder (it may be called `BioGuard-main`). A downloaded ZIP cannot use `git pull`; download a fresh ZIP when updating. Keep your old folder/data until the update works.
 
-**Check the download:** the project folder must contain `Start-PrivateBeta.ps1`, `backend/`, `mobile/package.json`, `mobile/src/` and `bioguard_comparison_winner.zip`. If anything is missing, ask the owner for a complete copy. The current repository tracks `mobile` as a nested repository; cloning or downloading a ZIP may not include its app files.
+**Check the download:** the project folder must contain `Start-PrivateBeta.ps1`, `backend/`, `mobile/package.json`, `mobile/src/` and `bioguard_comparison_winner.zip`. If anything is missing, ask the owner for a complete copy.
 
 ## 2. Open a terminal and prepare your computer
 

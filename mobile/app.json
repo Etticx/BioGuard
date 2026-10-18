@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "BioGuard",
+    "slug": "bioguard",
+    "version": "0.2.0",
+    "scheme": "bioguard",
+    "orientation": "portrait",
+    "icon": "./assets/bioguard-icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#F7F8F4",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.bioguard.prototype"
+    },
+    "android": {
+      "package": "com.bioguard.prototype",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/bioguard-adaptive.png",
+        "backgroundColor": "#F7F8F4"
+      },
+      "predictiveBackGestureEnabled": true,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a plant photo to identify it.",
+          "cameraPermission": "Take a plant photo to identify it.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/bioguard-splash.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#F7F8F4"
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "df3e5637-434f-4964-9aa4-c12b3e4d0ec4"
+      }
+    },
+    "owner": "alifasyraf461"
+  }
+}

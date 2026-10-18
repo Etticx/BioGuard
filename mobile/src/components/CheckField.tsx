@@ -1,0 +1,5 @@
+import { Pressable, View } from 'react-native';
+import { Text } from 'react-native-paper';
+import Svg, { Path, Rect } from 'react-native-svg';
+import { colors } from '../theme';
+export function CheckField({label,checked,onChange,disabled=false}:{label:string;checked:boolean;onChange:(value:boolean)=>void;disabled?:boolean}){return <Pressable accessibilityRole="checkbox" accessibilityLabel={label} accessibilityState={{checked,disabled}} aria-checked={checked} aria-disabled={disabled} disabled={disabled} onPress={()=>onChange(!checked)} style={{flexDirection:'row',gap:12,alignItems:'center',paddingVertical:12,minHeight:48}}><View><Svg width={24} height={24} viewBox="0 0 24 24" fill="none" aria-hidden><Rect x={3} y={3} width={18} height={18} rx={3} stroke={colors.green} strokeWidth={1.7} fill={checked?colors.green:'transparent'}/>{checked&&<Path d="m7 12 3 3 7-7" stroke="white" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>}</Svg></View><Text style={{flex:1}}>{label}</Text></Pressable>;}
