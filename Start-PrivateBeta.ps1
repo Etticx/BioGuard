@@ -54,7 +54,6 @@ try {
     } catch { }
     Write-Host 'BioGuard private beta - local Wi-Fi only; nothing is published.'
     Write-Host "Phone browser: http://${bioAddress}:$ApiPort/"
-    Write-Host "Management: http://${bioAddress}:$ApiPort/officer"
     Write-Host 'Initial access is in backend/data/private-beta/local-accounts.json. Change temporary passwords before inviting testers.'
     Write-Host 'Keep phones and laptop on the same private Wi-Fi. Do not forward this port to the Internet.'
     if ($Mode -eq 'Web') {
