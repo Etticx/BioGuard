@@ -54,7 +54,7 @@ try {
     } catch { }
     Write-Host 'BioGuard private beta - local Wi-Fi only; nothing is published.'
     Write-Host "Phone browser: http://${bioAddress}:$ApiPort/"
-    Write-Host 'Initial access is in backend/data/private-beta/local-accounts.json. Change temporary passwords before inviting testers.'
+    Write-Host 'Test logins: grounds / 123, ecology / 123, management / 123.'
     Write-Host 'Keep phones and laptop on the same private Wi-Fi. Do not forward this port to the Internet.'
     if ($Mode -eq 'Web') {
         & $bioPython -m uvicorn app:app --app-dir backend --host 0.0.0.0 --port $ApiPort --no-access-log

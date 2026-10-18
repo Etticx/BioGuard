@@ -50,7 +50,7 @@ try {
     [pscustomobject]@{url=$bioUrl;api_port=$ApiPort;tunnel_pid=$bioTunnelProcess.Id;tunnel_started_at=$bioTunnelProcess.StartTime.ToUniversalTime().ToString('o');started_at=[DateTimeOffset]::UtcNow.ToString('o')} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $bioData 'active-session.json') -Encoding UTF8
     Write-Host "BioGuard remote beta: $bioUrl"
     Write-Host 'This uses separate remote-beta data. Existing local reports are untouched.'
-    Write-Host 'Private initial passwords: backend/data/remote-beta/local-accounts.json. Change temporary passwords at first sign-in.'
+    Write-Host 'Test logins: grounds / 123, ecology / 123, management / 123.'
     Write-Host 'Keep this terminal and laptop running. Ctrl+C stops this remote beta.'
     Write-Host 'A restart creates a different URL: an APK built with the previous URL needs a new build.'
     while (-not $bioTunnelProcess.HasExited) {
