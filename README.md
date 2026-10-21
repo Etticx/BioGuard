@@ -124,10 +124,12 @@ npx eas-cli@latest build --platform android --profile preview
 - The backup uses the same botanical reference checks and editable sections. Internet is still needed for uncached reference pages. Speed and quality depend on the installed model and laptop; management must review the result.
 - Groq and local drafts have separate 15-minute caches and per-account cooldowns, so a Groq quota error does not delay the first local attempt. The shared hourly cap and in-flight protection still apply. Usage receipts record Groq and local request counts separately.
 
-## Elmina demo map pin
+## Elmina live map
 
-- New reports in the updated app require **Pin plant location**. Drag the supplied Elmina City Centre image beneath the fixed red pin. Scroll with a mouse/trackpad on a laptop or pinch with two fingers on a phone to zoom, then tap **Done**. Cancel leaves the previous selection unchanged.
-- The map is bundled for offline use. Confirmed points are saved with drafts and reports as image positions (`demo_pin`, map version `elmina-city-centre-v1`), separate from GPS coordinates.
-- This checkpoint does not predict spread or identify water features. The illustrated map has not been geographically calibrated or field-verified.
-- Restart the local Web launcher to rebuild its exported app; Expo users reload the project. Previously installed APKs need a new build to receive these changes.
-- Older clients/reports without demo-map mode remain compatible. Submissions marked `demo_map` require a valid pin on both client and server.
+- New reports require **Pin plant location** on the OpenStreetMap map near Elmina Lakeside Mall. Drag the map beneath the red pin, scroll/pinch to zoom, then tap **Done**. No device GPS permission is requested.
+- The approximate pilot rectangle is 3.17790–3.18343 latitude and 101.50485–101.51333 longitude. Centre: 3.180661, 101.509091. It is a prototype boundary, not a surveyed SDP property boundary.
+- Reports save real latitude/longitude with map version `elmina-lakeside-v1`. The server rejects new live-map reports outside the boundary. Management shows the same map and saved point.
+- Internet and a reachable backend are required. Map tiles load directly from OpenStreetMap with visible attribution and normal browser caching; no offline tile downloads or background prefetch are provided. Leaflet 1.9.4 is bundled locally under `web/vendor/leaflet/` with its licence.
+- Older image-map reports remain readable on their original illustration. An old draft must be pinned again before sending from the updated app; no coordinates are guessed from the picture.
+- Restart `./Start-PrivateBeta.ps1 -Mode Web` after this update, then refresh the browser. The browser export has also been rebuilt. Expo Go users reload the project after restarting its backend; installed APKs need a new build.
+- The shared map route is `/maps/elmina`; other application pages retain their existing frame restrictions. No spread prediction or automatic identification of drains is included.

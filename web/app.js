@@ -24,6 +24,15 @@ function drawInbox(){const inbox=$('#inbox');inbox.replaceChildren();const visib
 function drawLocation(container,report){
  const section=node('section',undefined,'report-location');section.setAttribute('aria-label','Reported plant location');
  section.append(node('h3','Plant location'));
+ if(report.location_mode==='osm'){
+  if(report.map_id!=='elmina-lakeside-v1'||!Number.isFinite(report.latitude)||!Number.isFinite(report.longitude)){
+   section.append(node('p','This map location cannot be displayed.','compact-note'));container.append(section);return;
+  }
+  const map=node('iframe',undefined,'report-location-live');map.title='Reported plant location near Elmina Lakeside Mall';
+  map.src='/maps/elmina?mode=view&latitude='+encodeURIComponent(report.latitude)+'&longitude='+encodeURIComponent(report.longitude);
+  map.referrerPolicy='strict-origin-when-cross-origin';section.append(map,node('p','Scroll or pinch to zoom. Drag to move. Red pin: reported plant location.','compact-note'));container.append(section);return;
+ }
+
  const pin=report.demo_pin;
  const valid=pin&&pin.map_id==='elmina-city-centre-v1'&&typeof pin.x==='number'&&typeof pin.y==='number'&&Number.isFinite(pin.x)&&Number.isFinite(pin.y)&&pin.x>=0&&pin.x<=1&&pin.y>=0&&pin.y<=1;
  if(!valid){section.append(node('p',pin?'This map location cannot be displayed.':'No map pin was saved with this report.','compact-note'));container.append(section);return;}
@@ -32,7 +41,7 @@ function drawLocation(container,report){
  image.src='/officer-assets/elmina-city-centre-demo.png';image.alt='Elmina City Centre demo map';image.width=642;image.height=453;image.draggable=false;
  const marker=node('img',undefined,'report-location-pin');marker.src='/officer-assets/location-pin.svg';marker.alt='Plant location selected by the reporter';marker.style.left=(pin.x*100)+'%';marker.style.top=(pin.y*100)+'%';
  image.addEventListener('error',()=>{frame.hidden=true;figure.append(node('p','The location map could not load. Refresh to try again.','compact-note'));});
- frame.append(image,marker);enableLocationGestures(frame,image,marker,pin);figure.append(frame,node('figcaption','Scroll or pinch to zoom. Drag to move. Red pin: reported plant location.','compact-note'));
+ frame.append(image,marker);enableLocationGestures(frame,image,marker,pin);figure.append(frame,node('figcaption','Scroll or pinch to zoom. Drag to move. Older demo image. Red pin: reported plant location.','compact-note'));
  layout.append(figure);section.append(layout);container.append(section);
 }
 function enableLocationGestures(frame,image,marker,pin){

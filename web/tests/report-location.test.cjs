@@ -41,3 +41,8 @@ test('two touch pointers pinch to zoom and a single pointer pans the zoomed map'
  f.frame.listeners.pointerup(event({pointerId:2}));const before=f.pin.style.left;
  f.frame.listeners.pointermove(event({pointerId:1,clientX:80,clientY:100}));assert.notEqual(f.pin.style.left,before);assert.equal(JSON.stringify(f.report),original);
 });
+
+test('new reports use the real map and exact coordinates, older image reports remain separate',()=>{
+ const {context,container}=setup();context.drawLocation(container,{site:'Synthetic',landmark:'Mall',location_mode:'osm',map_id:'elmina-lakeside-v1',latitude:3.180661,longitude:101.509091});
+ const all=flatten(container),map=all.find(e=>e.className==='report-location-live');assert.ok(map);assert.equal(map.tag,'iframe');assert.equal(map.src,'/maps/elmina?mode=view&latitude=3.180661&longitude=101.509091');assert.equal(all.some(e=>e.className==='report-location-image'),false);assert.equal(all.some(e=>/Older demo image/.test(e.textContent)),false);
+});

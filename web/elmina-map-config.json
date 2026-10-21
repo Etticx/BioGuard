@@ -1,0 +1,21 @@
+{
+  "map_id": "elmina-lakeside-v1",
+  "center": [
+    3.180661,
+    101.509091
+  ],
+  "bounds": [
+    [
+      3.1779,
+      101.50485
+    ],
+    [
+      3.18343,
+      101.51333
+    ]
+  ],
+  "initial_zoom": 17,
+  "min_zoom": 17,
+  "max_zoom": 19,
+  "tile_url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+}

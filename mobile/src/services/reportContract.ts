@@ -1,15 +1,16 @@
+import {isElminaPoint,ELMINA_MAP_ID} from './elminaMap';
 import { isDemoPin, type DemoPin } from './demoMap';
 import { parseIdentification, type Identification } from './contract';
 
 export type User = { id: string; username: string; display_name: string; role: 'ground' | 'ecology' | 'management'; team_id?: string | null; must_change_password?: boolean };
 export type Session = { token: string; user: User };
 export type Extent = 'one' | 'few' | 'patch' | 'unsure';
-export type ReportDetails = { site: string; landmark: string; extent: Extent; observed_on: string; notes: string; request_key: string; identify_requested?: boolean; identification_questioned?: boolean; site_id?: string | null; block_id?: string | null; latitude?: number | null; longitude?: number | null; location_mode?: 'demo_map' | null; demo_pin?: DemoPin | null };
+export type ReportDetails = { site: string; landmark: string; extent: Extent; observed_on: string; notes: string; request_key: string; identify_requested?: boolean; identification_questioned?: boolean; site_id?: string | null; block_id?: string | null; latitude?: number | null; longitude?: number | null; location_mode?: 'demo_map' | 'osm' | null; map_id?: 'elmina-lakeside-v1' | null; demo_pin?: DemoPin | null };
 export type FieldReport = {
   id: string; reference: string; status: 'submitted' | 'needs_info' | 'assigned' | 'closed' | 'in_progress' | 'blocked' | 'awaiting_verification' | 'follow_up' | 'completed' | 'cancelled' | 'duplicate';
   revision: number; site: string; landmark: string; extent: Extent; observed_on: string;
   notes: string; reporter_name: string; reporter_id: string; assigned_team_id: string | null;
-  prediction: Identification | null; created_at: string; identification_questioned?: boolean; block_name?: string; latitude?: number; longitude?: number; location_mode?: 'demo_map' | null; demo_pin?: DemoPin | null; work_items: WorkItem[];
+  prediction: Identification | null; created_at: string; identification_questioned?: boolean; block_name?: string; latitude?: number; longitude?: number; location_mode?: 'demo_map' | 'osm' | null; map_id?: 'elmina-lakeside-v1' | null; demo_pin?: DemoPin | null; work_items: WorkItem[];
   photos: { id: string; kind: string; url: string; work_id?: string | null }[];
   review: null | { confirmed_species: string; notes: string; reviewer_name: string;
     assigned_team_name?: string; removal_instructions: string; replacement_species: string;
@@ -32,6 +33,7 @@ export function parseReport(value: unknown): FieldReport {
   return report;
 }
 export function validateReportDetails(details: ReportDetails): string | null {
+  if(details.location_mode==='osm'&&(details.map_id!==ELMINA_MAP_ID||!isElminaPoint(details)))return 'Pin the plant inside the Elmina Lakeside pilot area.';
   if (details.location_mode==='demo_map'&&!isDemoPin(details.demo_pin)) return 'Pin the plant location before submitting.';
   if (!details.site.trim()) return 'Add the site or block.';
   if (!details.landmark.trim()) return 'Add a nearby landmark.';

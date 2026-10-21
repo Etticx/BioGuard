@@ -104,6 +104,10 @@ def create_app(predictor_factory=None, data_dir=None, seed_accounts=True, privat
         response.headers["Referrer-Policy"]="no-referrer"
         response.headers["X-Frame-Options"]="DENY"
         response.headers["Content-Security-Policy"]="frame-ancestors 'none'"
+        if request.url.path == "/maps/elmina":
+            response.headers["X-Frame-Options"]="SAMEORIGIN"
+            response.headers["Content-Security-Policy"]="frame-ancestors 'self'"
+            response.headers["Referrer-Policy"]="strict-origin-when-cross-origin"
         return response
 
     api.include_router(reporting_router)

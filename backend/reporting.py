@@ -1,5 +1,6 @@
 """Authenticated reporting and ecology review, shared by mobile and web."""
 from field_clock import field_today
+from map_bounds import CONFIG as MAP_CONFIG, in_elmina
 from datetime import date
 from hashlib import sha256
 from io import BytesIO
@@ -45,7 +46,8 @@ class Details(BaseModel):
     identification_questioned: bool = False
     site_id: str | None = None
     block_id: str | None = None
-    location_mode: Literal["demo_map"] | None = None
+    location_mode: Literal["demo_map", "osm"] | None = None
+    map_id: Literal["elmina-lakeside-v1"] | None = None
     demo_pin: DemoPin | None = None
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
@@ -53,6 +55,8 @@ class Details(BaseModel):
 
     @model_validator(mode="after")
     def valid_date(self):
+        if self.location_mode == "osm" and (self.map_id != MAP_CONFIG['map_id'] or not in_elmina(self.latitude,self.longitude) or self.demo_pin is not None):
+            raise ValueError("Pin the plant inside the Elmina Lakeside pilot area.")
         if self.location_mode == "demo_map" and self.demo_pin is None:
             raise ValueError("Pin the plant location on the demo map.")
         if self.demo_pin is not None and (self.location_mode != "demo_map" or self.latitude is not None or self.longitude is not None):
@@ -178,7 +182,7 @@ async def submit(request: Request):
             photos.append(("overview", mime, overview))
         metadata = details.model_dump(mode="json")
         # Preserve pre-map request digests so an older queued upload can still retry safely.
-        for key in ("location_mode", "demo_pin"):
+        for key in ("location_mode", "demo_pin", "map_id"):
             if metadata.get(key) is None: metadata.pop(key, None)
         request.app.state.records.validate_location(metadata)
         request_key = metadata.pop("request_key")
@@ -275,3 +279,8 @@ def officer_page(request: Request):
         if not user or user["role"]!="management" or user.get("must_change_password"):
             return RedirectResponse("/",status_code=303,headers={"Cache-Control":"no-store"})
     return response
+
+
+@router.get('/maps/elmina', include_in_schema=False)
+def elmina_map():
+    return FileResponse(Path(__file__).parent.parent/'web'/'elmina-map.html',media_type='text/html')

@@ -6,6 +6,7 @@ import { WebView } from 'react-native-webview';
 import { useTeamSession } from '../hooks/useTeamSession';
 import { base, SessionExpired, signOut } from '../services/reports';
 import { isOfficerPage, officerUrl, sessionHeaders } from '../services/roleAccess';
+import { isElminaMapPage } from '../services/elminaMap';
 import { colors } from '../theme';
 
 export function OfficerWorkspace() {
@@ -26,6 +27,7 @@ export function OfficerWorkspace() {
         originWhitelist={['*']}
         onShouldStartLoadWithRequest={request => {
           if (isOfficerPage(request.url, url)) return true;
+          if (!request.isTopFrame && isElminaMapPage(request.url,new URL('/maps/elmina',url).href)) return true;
           try {
             const target = new URL(request.url);
             if (target.origin === new URL(url).origin && target.pathname.startsWith('/admin/backups/')) {
