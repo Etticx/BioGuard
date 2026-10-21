@@ -27,6 +27,13 @@ class Login(BaseModel):
     password: str = Field(min_length=1, max_length=200)
 
 
+class DemoPin(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    map_id: Literal["elmina-city-centre-v1"]
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+
+
 class Details(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
     site: str = Field(min_length=1, max_length=100)
@@ -38,12 +45,18 @@ class Details(BaseModel):
     identification_questioned: bool = False
     site_id: str | None = None
     block_id: str | None = None
+    location_mode: Literal["demo_map"] | None = None
+    demo_pin: DemoPin | None = None
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     request_key: str = Field(min_length=8, max_length=100, pattern=r"^[a-zA-Z0-9_-]+$")
 
     @model_validator(mode="after")
     def valid_date(self):
+        if self.location_mode == "demo_map" and self.demo_pin is None:
+            raise ValueError("Pin the plant location on the demo map.")
+        if self.demo_pin is not None and (self.location_mode != "demo_map" or self.latitude is not None or self.longitude is not None):
+            raise ValueError("A demo map point must be kept separate from GPS coordinates.")
         if (self.latitude is None) != (self.longitude is None):
             raise ValueError("Add both coordinates, or leave both empty.")
         if self.observed_on > field_today():
@@ -164,6 +177,9 @@ async def submit(request: Request):
             mime, overview = await read_photo(form["overview"])
             photos.append(("overview", mime, overview))
         metadata = details.model_dump(mode="json")
+        # Preserve pre-map request digests so an older queued upload can still retry safely.
+        for key in ("location_mode", "demo_pin"):
+            if metadata.get(key) is None: metadata.pop(key, None)
         request.app.state.records.validate_location(metadata)
         request_key = metadata.pop("request_key")
         digest = sha256(json.dumps(metadata, sort_keys=True).encode() + b"".join(sha256(photo[2]).digest() for photo in photos)).hexdigest()

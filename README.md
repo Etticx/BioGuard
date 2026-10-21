@@ -123,3 +123,11 @@ npx eas-cli@latest build --platform android --profile preview
 - Ollama must listen on its normal local address `http://127.0.0.1:11434`. No model is downloaded automatically, and its port does not need to be exposed to friends.
 - The backup uses the same botanical reference checks and editable sections. Internet is still needed for uncached reference pages. Speed and quality depend on the installed model and laptop; management must review the result.
 - Groq and local drafts have separate 15-minute caches and per-account cooldowns, so a Groq quota error does not delay the first local attempt. The shared hourly cap and in-flight protection still apply. Usage receipts record Groq and local request counts separately.
+
+## Elmina demo map pin
+
+- New reports in the updated app require **Pin plant location**. Pan/zoom the supplied Elmina City Centre image beneath the fixed red pin, then tap **Done**. Cancel leaves the previous selection unchanged.
+- The map is bundled for offline use. Confirmed points are saved with drafts and reports as image positions (`demo_pin`, map version `elmina-city-centre-v1`), separate from GPS coordinates.
+- This checkpoint does not predict spread or identify water features. The illustrated map has not been geographically calibrated or field-verified.
+- Restart the local Web launcher to rebuild its exported app; Expo users reload the project. Previously installed APKs need a new build to receive these changes.
+- Older clients/reports without demo-map mode remain compatible. Submissions marked `demo_map` require a valid pin on both client and server.
