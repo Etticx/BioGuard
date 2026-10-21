@@ -1,0 +1,2282 @@
+{
+  "type": "FeatureCollection",
+  "name": "Elmina prototype inspection blocks",
+  "attribution": "© OpenStreetMap contributors; ODbL 1.0 https://www.openstreetmap.org/copyright",
+  "description": "Inspection planning blocks, not infestation or spread predictions. Roads and paths guide divisions; artificial splits subdivide large areas. Outside pilot bounds is not covered. Green land may contain buildings, paving or unmapped water.",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "B01",
+      "properties": {
+        "name": "B01 — near Persiaran Garcinia",
+        "block_id": "B01",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 38075,
+        "nearby_road": "Persiaran Garcinia",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.51039159706,
+              3.18343
+            ],
+            [
+              101.5104353,
+              3.1833668
+            ],
+            [
+              101.510402,
+              3.1833535
+            ],
+            [
+              101.5103763,
+              3.1833285
+            ],
+            [
+              101.5103654,
+              3.1833074
+            ],
+            [
+              101.5103603,
+              3.1832842
+            ],
+            [
+              101.5087345,
+              3.1820978
+            ],
+            [
+              101.50764265000001,
+              3.1813118190816594
+            ],
+            [
+              101.50764265000001,
+              3.18343
+            ],
+            [
+              101.51029420602883,
+              3.18343
+            ],
+            [
+              101.51039159706,
+              3.18343
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B02",
+      "properties": {
+        "name": "B02 — near Persiaran Garcinia",
+        "block_id": "B02",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 35460,
+        "nearby_road": "Persiaran Garcinia",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.50485,
+              3.1813688416298267
+            ],
+            [
+              101.50485,
+              3.18343
+            ],
+            [
+              101.506246325,
+              3.18343
+            ],
+            [
+              101.506246325,
+              3.1813688416298267
+            ],
+            [
+              101.50485,
+              3.1813688416298267
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B03",
+      "properties": {
+        "name": "B03 — near Persiaran Garcinia",
+        "block_id": "B03",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 35460,
+        "nearby_road": "Persiaran Garcinia",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.506246325,
+              3.18343
+            ],
+            [
+              101.50764265000001,
+              3.18343
+            ],
+            [
+              101.50764265000001,
+              3.1813688416298267
+            ],
+            [
+              101.506246325,
+              3.1813688416298267
+            ],
+            [
+              101.506246325,
+              3.18343
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B04",
+      "properties": {
+        "name": "B04 — near Persiaran Garcinia",
+        "block_id": "B04",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 39111,
+        "nearby_road": "Persiaran Garcinia",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.5103603,
+              3.1832842
+            ],
+            [
+              101.5103654,
+              3.1833074
+            ],
+            [
+              101.5103763,
+              3.1833285
+            ],
+            [
+              101.510402,
+              3.1833535
+            ],
+            [
+              101.5104353,
+              3.1833668
+            ],
+            [
+              101.51039159706,
+              3.18343
+            ],
+            [
+              101.5114030818612,
+              3.18343
+            ],
+            [
+              101.5113961,
+              3.1834073
+            ],
+            [
+              101.5114189,
+              3.1832838
+            ],
+            [
+              101.511523,
+              3.183144
+            ],
+            [
+              101.5116598,
+              3.1830985
+            ],
+            [
+              101.511781,
+              3.183116191165173
+            ],
+            [
+              101.511781,
+              3.1813050659232833
+            ],
+            [
+              101.5117264,
+              3.1812473
+            ],
+            [
+              101.5117079,
+              3.1811569
+            ],
+            [
+              101.5117261,
+              3.1810683
+            ],
+            [
+              101.5117396292082,
+              3.181035499337833
+            ],
+            [
+              101.51161229276755,
+              3.181035499337833
+            ],
+            [
+              101.5115181,
+              3.1812237
+            ],
+            [
+              101.5114054,
+              3.1814406
+            ],
+            [
+              101.5113062,
+              3.1815316
+            ],
+            [
+              101.5111694,
+              3.181379
+            ],
+            [
+              101.5109521,
+              3.1815182
+            ],
+            [
+              101.5107429,
+              3.1812612
+            ],
+            [
+              101.5106195,
+              3.1813566
+            ],
+            [
+              101.5104936,
+              3.1812041
+            ],
+            [
+              101.51035445913095,
+              3.181035499337833
+            ],
+            [
+              101.510232,
+              3.181035499337833
+            ],
+            [
+              101.510232,
+              3.183190575249108
+            ],
+            [
+              101.5103603,
+              3.1832842
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B05",
+      "properties": {
+        "name": "B05 — near Iconic Bridge of Elmina City",
+        "block_id": "B05",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 41999,
+        "nearby_road": "Iconic Bridge of Elmina City",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.511781,
+              3.183116191165173
+            ],
+            [
+              101.511816,
+              3.1831213
+            ],
+            [
+              101.511956,
+              3.183209
+            ],
+            [
+              101.51207,
+              3.1834236
+            ],
+            [
+              101.51207280205128,
+              3.18343
+            ],
+            [
+              101.51333,
+              3.18343
+            ],
+            [
+              101.51333,
+              3.181035499337833
+            ],
+            [
+              101.51263299490243,
+              3.181035499337833
+            ],
+            [
+              101.5121322,
+              3.1814484
+            ],
+            [
+              101.5120465,
+              3.1814759
+            ],
+            [
+              101.5119517,
+              3.1814454
+            ],
+            [
+              101.5118385,
+              3.1813659
+            ],
+            [
+              101.511781,
+              3.1813050659232833
+            ],
+            [
+              101.511781,
+              3.183116191165173
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B06",
+      "properties": {
+        "name": "B06 — near Persiaran Garcinia",
+        "block_id": "B06",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 13720,
+        "nearby_road": "Persiaran Garcinia",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.507250266433,
+              3.180777984692987
+            ],
+            [
+              101.5071708,
+              3.1808937
+            ],
+            [
+              101.507134,
+              3.1809457
+            ],
+            [
+              101.5072024,
+              3.1809949
+            ],
+            [
+              101.50868299999999,
+              3.1820607271261583
+            ],
+            [
+              101.50868299999999,
+              3.180777984692987
+            ],
+            [
+              101.507250266433,
+              3.180777984692987
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B07",
+      "properties": {
+        "name": "B07 — near Persiaran Garcinia",
+        "block_id": "B07",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 35282,
+        "nearby_road": "Persiaran Garcinia",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.5102787,
+              3.1809437
+            ],
+            [
+              101.510232,
+              3.1808965276011563
+            ],
+            [
+              101.51011464421681,
+              3.180777984692987
+            ],
+            [
+              101.50868299999999,
+              3.180777984692987
+            ],
+            [
+              101.50868299999999,
+              3.1820607271261583
+            ],
+            [
+              101.5087345,
+              3.1820978
+            ],
+            [
+              101.510232,
+              3.183190575249108
+            ],
+            [
+              101.510232,
+              3.181035499337833
+            ],
+            [
+              101.51035445913095,
+              3.181035499337833
+            ],
+            [
+              101.5102787,
+              3.1809437
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B08",
+      "properties": {
+        "name": "B08 — near Iconic Bridge of Elmina City",
+        "block_id": "B08",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 19314,
+        "nearby_road": "Iconic Bridge of Elmina City",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.50992815244268,
+              3.1804953946784855
+            ],
+            [
+              101.5098542,
+              3.1805474
+            ],
+            [
+              101.5099994,
+              3.1806615
+            ],
+            [
+              101.5100711,
+              3.180734
+            ],
+            [
+              101.5102787,
+              3.1809437
+            ],
+            [
+              101.5104936,
+              3.1812041
+            ],
+            [
+              101.5106195,
+              3.1813566
+            ],
+            [
+              101.5107429,
+              3.1812612
+            ],
+            [
+              101.5109521,
+              3.1815182
+            ],
+            [
+              101.5111694,
+              3.181379
+            ],
+            [
+              101.5113062,
+              3.1815316
+            ],
+            [
+              101.5114054,
+              3.1814406
+            ],
+            [
+              101.5115181,
+              3.1812237
+            ],
+            [
+              101.51162,
+              3.1810201
+            ],
+            [
+              101.5117419,
+              3.1807056
+            ],
+            [
+              101.5116626,
+              3.1805746
+            ],
+            [
+              101.5115174,
+              3.1804365
+            ],
+            [
+              101.5110185,
+              3.1802055
+            ],
+            [
+              101.5108869,
+              3.1801874
+            ],
+            [
+              101.5105898,
+              3.18021
+            ],
+            [
+              101.51058342152932,
+              3.180034592055931
+            ],
+            [
+              101.51019523727264,
+              3.1803075735335566
+            ],
+            [
+              101.51013950817699,
+              3.1803467637135134
+            ],
+            [
+              101.5101628,
+              3.1806835
+            ],
+            [
+              101.50992815244268,
+              3.1804953946784855
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B09",
+      "properties": {
+        "name": "B09 — near Iconic Bridge of Elmina City",
+        "block_id": "B09",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 11018,
+        "nearby_road": "Iconic Bridge of Elmina City",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.5108869,
+              3.1801874
+            ],
+            [
+              101.5110185,
+              3.1802055
+            ],
+            [
+              101.5115174,
+              3.1804365
+            ],
+            [
+              101.5116626,
+              3.1805746
+            ],
+            [
+              101.5117419,
+              3.1807056
+            ],
+            [
+              101.51162,
+              3.1810201
+            ],
+            [
+              101.51161229276755,
+              3.181035499337833
+            ],
+            [
+              101.5117396292082,
+              3.181035499337833
+            ],
+            [
+              101.5117261,
+              3.1810683
+            ],
+            [
+              101.5117079,
+              3.1811569
+            ],
+            [
+              101.5117264,
+              3.1812473
+            ],
+            [
+              101.5118385,
+              3.1813659
+            ],
+            [
+              101.5119517,
+              3.1814454
+            ],
+            [
+              101.5120465,
+              3.1814759
+            ],
+            [
+              101.5121322,
+              3.1814484
+            ],
+            [
+              101.5126769,
+              3.1809993
+            ],
+            [
+              101.5127105,
+              3.1809015
+            ],
+            [
+              101.51253,
+              3.1803272
+            ],
+            [
+              101.5124107,
+              3.1801561
+            ],
+            [
+              101.5123207,
+              3.1801112
+            ],
+            [
+              101.5122535,
+              3.1801095
+            ],
+            [
+              101.5117071,
+              3.1801162
+            ],
+            [
+              101.5116381,
+              3.1800944
+            ],
+            [
+              101.5112397,
+              3.1798258
+            ],
+            [
+              101.5111859,
+              3.1797989
+            ],
+            [
+              101.511117,
+              3.1798073
+            ],
+            [
+              101.5108934,
+              3.1798543
+            ],
+            [
+              101.5107975,
+              3.1798493
+            ],
+            [
+              101.5106244,
+              3.1797872
+            ],
+            [
+              101.5105728,
+              3.1797425
+            ],
+            [
+              101.51058342152932,
+              3.180034592055931
+            ],
+            [
+              101.5105898,
+              3.18021
+            ],
+            [
+              101.5108869,
+              3.1801874
+            ]
+          ],
+          [
+            [
+              101.5113313,
+              3.1802331
+            ],
+            [
+              101.5110744,
+              3.1800816
+            ],
+            [
+              101.5111549,
+              3.1798268
+            ],
+            [
+              101.5115796,
+              3.1801454
+            ],
+            [
+              101.512274,
+              3.1801265
+            ],
+            [
+              101.5123999,
+              3.1804051
+            ],
+            [
+              101.5125371,
+              3.1808133
+            ],
+            [
+              101.5120233,
+              3.1812126
+            ],
+            [
+              101.5118656,
+              3.1810902
+            ],
+            [
+              101.5120613,
+              3.1807958
+            ],
+            [
+              101.5117547,
+              3.1803527
+            ],
+            [
+              101.5113313,
+              3.1802331
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B10",
+      "properties": {
+        "name": "B10 — near Persiaran Garcinia",
+        "block_id": "B10",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 36605,
+        "nearby_road": "Persiaran Garcinia",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.50764265000001,
+              3.1813118190816594
+            ],
+            [
+              101.5072024,
+              3.1809949
+            ],
+            [
+              101.507134,
+              3.1809457
+            ],
+            [
+              101.5058016,
+              3.1799817
+            ],
+            [
+              101.5057623,
+              3.1799533
+            ],
+            [
+              101.5056785,
+              3.17989
+            ],
+            [
+              101.50485,
+              3.1793076832596534
+            ],
+            [
+              101.50485,
+              3.1813688416298267
+            ],
+            [
+              101.50764265000001,
+              3.1813688416298267
+            ],
+            [
+              101.50764265000001,
+              3.1813118190816594
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B11",
+      "properties": {
+        "name": "B11 — near Persiaran Garcinia",
+        "block_id": "B11",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 17537,
+        "nearby_road": "Persiaran Garcinia",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.50488605325349,
+              3.1793330235288724
+            ],
+            [
+              101.5056785,
+              3.17989
+            ],
+            [
+              101.5057623,
+              3.1799533
+            ],
+            [
+              101.5058016,
+              3.1799817
+            ],
+            [
+              101.50688569130678,
+              3.1807660470577446
+            ],
+            [
+              101.50688569130678,
+              3.1793330235288724
+            ],
+            [
+              101.50488605325349,
+              3.1793330235288724
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B12",
+      "properties": {
+        "name": "B12 — near Persiaran Alstonia",
+        "block_id": "B12",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 14235,
+        "nearby_road": "Persiaran Alstonia",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.5071708,
+              3.1808937
+            ],
+            [
+              101.5074422,
+              3.1804985
+            ],
+            [
+              101.5081838538128,
+              3.17942285
+            ],
+            [
+              101.50688569130678,
+              3.17942285
+            ],
+            [
+              101.50688569130678,
+              3.1807660470577446
+            ],
+            [
+              101.507134,
+              3.1809457
+            ],
+            [
+              101.5071708,
+              3.1808937
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B13",
+      "properties": {
+        "name": "B13 — near Persiaran Elmina",
+        "block_id": "B13",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 15892,
+        "nearby_road": "Persiaran Elmina",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.5092117,
+              3.1800022
+            ],
+            [
+              101.508464,
+              3.1796268
+            ],
+            [
+              101.5084961,
+              3.1795652
+            ],
+            [
+              101.5099399,
+              3.1798922
+            ],
+            [
+              101.5101195,
+              3.1800575
+            ],
+            [
+              101.51013950817699,
+              3.1803467637135134
+            ],
+            [
+              101.51019523727264,
+              3.1803075735335566
+            ],
+            [
+              101.51058342152932,
+              3.180034592055931
+            ],
+            [
+              101.5105728,
+              3.1797425
+            ],
+            [
+              101.5103698,
+              3.1795668
+            ],
+            [
+              101.5102087,
+              3.1794649
+            ],
+            [
+              101.5098526,
+              3.1794015
+            ],
+            [
+              101.5095487,
+              3.1793381
+            ],
+            [
+              101.5093015,
+              3.1792475
+            ],
+            [
+              101.5091949,
+              3.1791977
+            ],
+            [
+              101.5090543,
+              3.179089
+            ],
+            [
+              101.5089567,
+              3.1790233
+            ],
+            [
+              101.5088229,
+              3.1790301
+            ],
+            [
+              101.5087007,
+              3.1790928
+            ],
+            [
+              101.508477,
+              3.1794302
+            ],
+            [
+              101.508402,
+              3.1795072
+            ],
+            [
+              101.5082816,
+              3.1794982
+            ],
+            [
+              101.5083557,
+              3.1796625
+            ],
+            [
+              101.5089115,
+              3.1799588
+            ],
+            [
+              101.5094102,
+              3.1802321
+            ],
+            [
+              101.5098542,
+              3.1805474
+            ],
+            [
+              101.50992815244268,
+              3.1804953946784855
+            ],
+            [
+              101.5098235,
+              3.1804115
+            ],
+            [
+              101.5092117,
+              3.1800022
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B14",
+      "properties": {
+        "name": "B14 — near Iconic Bridge of Elmina City",
+        "block_id": "B14",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 42448,
+        "nearby_road": "Iconic Bridge of Elmina City",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.51333,
+              3.181035499337833
+            ],
+            [
+              101.51333,
+              3.1800525818443806
+            ],
+            [
+              101.51333,
+              3.179856100564421
+            ],
+            [
+              101.5132574,
+              3.1798089
+            ],
+            [
+              101.51323493220991,
+              3.1797942903711682
+            ],
+            [
+              101.5118444,
+              3.1788901
+            ],
+            [
+              101.51146574339563,
+              3.1786409986756663
+            ],
+            [
+              101.51117276237089,
+              3.1787371452819513
+            ],
+            [
+              101.5110632,
+              3.1787731
+            ],
+            [
+              101.510736,
+              3.1789155
+            ],
+            [
+              101.5103626,
+              3.1789239
+            ],
+            [
+              101.510232,
+              3.1788981608654767
+            ],
+            [
+              101.510232,
+              3.1794796378646772
+            ],
+            [
+              101.5103698,
+              3.1795668
+            ],
+            [
+              101.5105728,
+              3.1797425
+            ],
+            [
+              101.5106244,
+              3.1797872
+            ],
+            [
+              101.5107975,
+              3.1798493
+            ],
+            [
+              101.5108934,
+              3.1798543
+            ],
+            [
+              101.511117,
+              3.1798073
+            ],
+            [
+              101.5111859,
+              3.1797989
+            ],
+            [
+              101.5112397,
+              3.1798258
+            ],
+            [
+              101.5116381,
+              3.1800944
+            ],
+            [
+              101.5117071,
+              3.1801162
+            ],
+            [
+              101.5122535,
+              3.1801095
+            ],
+            [
+              101.5123207,
+              3.1801112
+            ],
+            [
+              101.5124107,
+              3.1801561
+            ],
+            [
+              101.51253,
+              3.1803272
+            ],
+            [
+              101.5127105,
+              3.1809015
+            ],
+            [
+              101.5126769,
+              3.1809993
+            ],
+            [
+              101.51263299490243,
+              3.181035499337833
+            ],
+            [
+              101.51333,
+              3.181035499337833
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B15",
+      "properties": {
+        "name": "B15 — near Persiaran Alstonia",
+        "block_id": "B15",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 37073,
+        "nearby_road": "Persiaran Alstonia",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.510232,
+              3.1788981608654767
+            ],
+            [
+              101.5097248,
+              3.1787982
+            ],
+            [
+              101.5093053,
+              3.1786432
+            ],
+            [
+              101.50892138261355,
+              3.178365394136866
+            ],
+            [
+              101.5088256,
+              3.1784921
+            ],
+            [
+              101.5074422,
+              3.1804985
+            ],
+            [
+              101.507250266433,
+              3.180777984692987
+            ],
+            [
+              101.51011464421681,
+              3.180777984692987
+            ],
+            [
+              101.5100711,
+              3.180734
+            ],
+            [
+              101.5099994,
+              3.1806615
+            ],
+            [
+              101.5098542,
+              3.1805474
+            ],
+            [
+              101.5094102,
+              3.1802321
+            ],
+            [
+              101.5089115,
+              3.1799588
+            ],
+            [
+              101.5083557,
+              3.1796625
+            ],
+            [
+              101.5082816,
+              3.1794982
+            ],
+            [
+              101.508402,
+              3.1795072
+            ],
+            [
+              101.508477,
+              3.1794302
+            ],
+            [
+              101.5087007,
+              3.1790928
+            ],
+            [
+              101.5088229,
+              3.1790301
+            ],
+            [
+              101.5089567,
+              3.1790233
+            ],
+            [
+              101.5090543,
+              3.179089
+            ],
+            [
+              101.5091949,
+              3.1791977
+            ],
+            [
+              101.5093015,
+              3.1792475
+            ],
+            [
+              101.5095487,
+              3.1793381
+            ],
+            [
+              101.5098526,
+              3.1794015
+            ],
+            [
+              101.5102087,
+              3.1794649
+            ],
+            [
+              101.510232,
+              3.1794796378646772
+            ],
+            [
+              101.510232,
+              3.1788981608654767
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B16",
+      "properties": {
+        "name": "B16 — near Iconic Bridge of Elmina City",
+        "block_id": "B16",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 12674,
+        "nearby_road": "Iconic Bridge of Elmina City",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.51333,
+              3.179460525254237
+            ],
+            [
+              101.51333,
+              3.1791859906110282
+            ],
+            [
+              101.51333,
+              3.1790251389037807
+            ],
+            [
+              101.513161,
+              3.1789239
+            ],
+            [
+              101.5128002,
+              3.1787396
+            ],
+            [
+              101.5124058,
+              3.1786474
+            ],
+            [
+              101.5118604,
+              3.1785636
+            ],
+            [
+              101.5116632,
+              3.1785762
+            ],
+            [
+              101.51146574339563,
+              3.1786409986756663
+            ],
+            [
+              101.5118444,
+              3.1788901
+            ],
+            [
+              101.51323493220991,
+              3.1797942903711682
+            ],
+            [
+              101.5132574,
+              3.1798089
+            ],
+            [
+              101.51333,
+              3.179856100564421
+            ],
+            [
+              101.51333,
+              3.1796897921824114
+            ],
+            [
+              101.51333,
+              3.179460525254237
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B17",
+      "properties": {
+        "name": "B17 — near Persiaran Alstonia",
+        "block_id": "B17",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 31626,
+        "nearby_road": "Persiaran Alstonia",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.5081838538128,
+              3.17942285
+            ],
+            [
+              101.5088256,
+              3.1784921
+            ],
+            [
+              101.50892138261355,
+              3.178365394136866
+            ],
+            [
+              101.5088278045456,
+              3.1782976802566045
+            ],
+            [
+              101.5086801,
+              3.1781908
+            ],
+            [
+              101.5084662,
+              3.1780065
+            ],
+            [
+              101.50836044759326,
+              3.1779
+            ],
+            [
+              101.50688569130678,
+              3.1779
+            ],
+            [
+              101.50688569130678,
+              3.17942285
+            ],
+            [
+              101.5081838538128,
+              3.17942285
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B18",
+      "properties": {
+        "name": "B18 — near Persiaran Garcinia",
+        "block_id": "B18",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 35937,
+        "nearby_road": "Persiaran Garcinia",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.50688569130678,
+              3.1779
+            ],
+            [
+              101.50485,
+              3.1779
+            ],
+            [
+              101.50485,
+              3.1791654149467643
+            ],
+            [
+              101.50485,
+              3.1792076938447282
+            ],
+            [
+              101.50485,
+              3.1793076832596534
+            ],
+            [
+              101.50488605325349,
+              3.1793330235288724
+            ],
+            [
+              101.50688569130678,
+              3.1793330235288724
+            ],
+            [
+              101.50688569130678,
+              3.1779
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B19",
+      "properties": {
+        "name": "B19 — near Persiaran Elmina",
+        "block_id": "B19",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 17361,
+        "nearby_road": "Persiaran Elmina",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.51128855311048,
+              3.1785244330745805
+            ],
+            [
+              101.51122542894466,
+              3.178482906495828
+            ],
+            [
+              101.51129369654572,
+              3.1784471455918517
+            ],
+            [
+              101.5112345,
+              3.1784084
+            ],
+            [
+              101.5110782,
+              3.1782697
+            ],
+            [
+              101.5109521,
+              3.1781506
+            ],
+            [
+              101.5108636,
+              3.1780769
+            ],
+            [
+              101.5107965,
+              3.1780207
+            ],
+            [
+              101.5107442,
+              3.177939
+            ],
+            [
+              101.51071317142856,
+              3.1779
+            ],
+            [
+              101.51038990868055,
+              3.1779
+            ],
+            [
+              101.51035795393258,
+              3.1779
+            ],
+            [
+              101.51002010017763,
+              3.1779
+            ],
+            [
+              101.5095299891791,
+              3.1779
+            ],
+            [
+              101.50922552265315,
+              3.1779
+            ],
+            [
+              101.50898997025692,
+              3.1779
+            ],
+            [
+              101.50884303384667,
+              3.1779
+            ],
+            [
+              101.50871376065574,
+              3.1779
+            ],
+            [
+              101.5088354,
+              3.17804
+            ],
+            [
+              101.50904424947684,
+              3.178202859921218
+            ],
+            [
+              101.5092759,
+              3.1783835
+            ],
+            [
+              101.5100815,
+              3.1786516
+            ],
+            [
+              101.5106101,
+              3.1787354
+            ],
+            [
+              101.5109248,
+              3.178706
+            ],
+            [
+              101.5111422465257,
+              3.178597461829531
+            ],
+            [
+              101.51128855311048,
+              3.1785244330745805
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "B20",
+      "properties": {
+        "name": "B20 — near Persiaran Elmina",
+        "block_id": "B20",
+        "type": "inspection_block",
+        "surface": "land_surface_unknown",
+        "area_m2_approx": 14025,
+        "nearby_road": "Persiaran Elmina",
+        "boundary_basis": "OSM roads/paths and shoreline; small pieces merged; large pieces subdivided with artificial lines",
+        "review_status": "prototype_not_field_verified",
+        "presence": "not_assessed",
+        "fill": "#79b85c",
+        "fill-opacity": 0.28,
+        "stroke": "#315f2d",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.51122542894466,
+              3.178482906495828
+            ],
+            [
+              101.51128855311048,
+              3.1785244330745805
+            ],
+            [
+              101.5115122,
+              3.1784128
+            ],
+            [
+              101.5117975,
+              3.1783123
+            ],
+            [
+              101.5123345,
+              3.1782787
+            ],
+            [
+              101.5128464,
+              3.1783667
+            ],
+            [
+              101.5132785,
+              3.1785594
+            ],
+            [
+              101.51333,
+              3.1785970316953307
+            ],
+            [
+              101.51333,
+              3.178443915999997
+            ],
+            [
+              101.51333,
+              3.1782449277258555
+            ],
+            [
+              101.51333,
+              3.1782242322916585
+            ],
+            [
+              101.51333,
+              3.1779
+            ],
+            [
+              101.51328071838236,
+              3.1779
+            ],
+            [
+              101.5130868806563,
+              3.1779
+            ],
+            [
+              101.5130074655536,
+              3.1779
+            ],
+            [
+              101.512978275,
+              3.1779
+            ],
+            [
+              101.51274691488439,
+              3.1779
+            ],
+            [
+              101.5125730460733,
+              3.1779
+            ],
+            [
+              101.51185944,
+              3.1779
+            ],
+            [
+              101.511702,
+              3.1779
+            ],
+            [
+              101.51147944663461,
+              3.1779
+            ],
+            [
+              101.51136086104725,
+              3.1779
+            ],
+            [
+              101.51087374671756,
+              3.1779
+            ],
+            [
+              101.51071317142856,
+              3.1779
+            ],
+            [
+              101.5107442,
+              3.177939
+            ],
+            [
+              101.5107965,
+              3.1780207
+            ],
+            [
+              101.5108636,
+              3.1780769
+            ],
+            [
+              101.5109521,
+              3.1781506
+            ],
+            [
+              101.5110782,
+              3.1782697
+            ],
+            [
+              101.5112345,
+              3.1784084
+            ],
+            [
+              101.51129369654572,
+              3.1784471455918517
+            ],
+            [
+              101.51122542894466,
+              3.178482906495828
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "osm-way-866518980",
+      "properties": {
+        "name": "Mapped water 866518980",
+        "type": "water",
+        "source": "OpenStreetMap contributors",
+        "source_url": "https://www.openstreetmap.org/way/866518980",
+        "osm_tags": {
+          "natural": "water"
+        },
+        "review_status": "mapped_not_field_verified",
+        "fill": "#218fd2",
+        "fill-opacity": 0.35,
+        "stroke": "#126aa2",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.5132785,
+              3.1785594
+            ],
+            [
+              101.5128464,
+              3.1783667
+            ],
+            [
+              101.5123345,
+              3.1782787
+            ],
+            [
+              101.5117975,
+              3.1783123
+            ],
+            [
+              101.5115122,
+              3.1784128
+            ],
+            [
+              101.5109248,
+              3.178706
+            ],
+            [
+              101.5106101,
+              3.1787354
+            ],
+            [
+              101.5100815,
+              3.1786516
+            ],
+            [
+              101.5092759,
+              3.1783835
+            ],
+            [
+              101.5088354,
+              3.17804
+            ],
+            [
+              101.50871376065574,
+              3.1779
+            ],
+            [
+              101.50836044759326,
+              3.1779
+            ],
+            [
+              101.5084662,
+              3.1780065
+            ],
+            [
+              101.5086801,
+              3.1781908
+            ],
+            [
+              101.5093053,
+              3.1786432
+            ],
+            [
+              101.5097248,
+              3.1787982
+            ],
+            [
+              101.5103626,
+              3.1789239
+            ],
+            [
+              101.510736,
+              3.1789155
+            ],
+            [
+              101.5110632,
+              3.1787731
+            ],
+            [
+              101.5116632,
+              3.1785762
+            ],
+            [
+              101.5118604,
+              3.1785636
+            ],
+            [
+              101.5124058,
+              3.1786474
+            ],
+            [
+              101.5128002,
+              3.1787396
+            ],
+            [
+              101.513161,
+              3.1789239
+            ],
+            [
+              101.51333,
+              3.1790251389037807
+            ],
+            [
+              101.51333,
+              3.1785970316953307
+            ],
+            [
+              101.5132785,
+              3.1785594
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "osm-way-1150761050",
+      "properties": {
+        "name": "Mapped pond 1150761050",
+        "type": "water",
+        "source": "OpenStreetMap contributors",
+        "source_url": "https://www.openstreetmap.org/way/1150761050",
+        "osm_tags": {
+          "natural": "water",
+          "water": "pond"
+        },
+        "review_status": "mapped_not_field_verified",
+        "fill": "#218fd2",
+        "fill-opacity": 0.35,
+        "stroke": "#126aa2",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.5113313,
+              3.1802331
+            ],
+            [
+              101.5117547,
+              3.1803527
+            ],
+            [
+              101.5120613,
+              3.1807958
+            ],
+            [
+              101.5118656,
+              3.1810902
+            ],
+            [
+              101.5120233,
+              3.1812126
+            ],
+            [
+              101.5125371,
+              3.1808133
+            ],
+            [
+              101.5123999,
+              3.1804051
+            ],
+            [
+              101.512274,
+              3.1801265
+            ],
+            [
+              101.5115796,
+              3.1801454
+            ],
+            [
+              101.5111549,
+              3.1798268
+            ],
+            [
+              101.5110744,
+              3.1800816
+            ],
+            [
+              101.5113313,
+              3.1802331
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "osm-way-1314193192",
+      "properties": {
+        "name": "Eco Lake",
+        "type": "water",
+        "source": "OpenStreetMap contributors",
+        "source_url": "https://www.openstreetmap.org/way/1314193192",
+        "osm_tags": {
+          "name": "Eco Lake",
+          "natural": "water",
+          "water": "lake"
+        },
+        "review_status": "mapped_not_field_verified",
+        "fill": "#218fd2",
+        "fill-opacity": 0.35,
+        "stroke": "#126aa2",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.5092117,
+              3.1800022
+            ],
+            [
+              101.5098235,
+              3.1804115
+            ],
+            [
+              101.5101628,
+              3.1806835
+            ],
+            [
+              101.5101195,
+              3.1800575
+            ],
+            [
+              101.5099399,
+              3.1798922
+            ],
+            [
+              101.5084961,
+              3.1795652
+            ],
+            [
+              101.508464,
+              3.1796268
+            ],
+            [
+              101.5092117,
+              3.1800022
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "osm-way-1545153995",
+      "properties": {
+        "name": "Mapped pond 1545153995",
+        "type": "water",
+        "source": "OpenStreetMap contributors",
+        "source_url": "https://www.openstreetmap.org/way/1545153995",
+        "osm_tags": {
+          "natural": "water",
+          "water": "pond"
+        },
+        "review_status": "mapped_not_field_verified",
+        "fill": "#218fd2",
+        "fill-opacity": 0.35,
+        "stroke": "#126aa2",
+        "stroke-width": 2
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              101.51207,
+              3.1834236
+            ],
+            [
+              101.511956,
+              3.183209
+            ],
+            [
+              101.511816,
+              3.1831213
+            ],
+            [
+              101.5116598,
+              3.1830985
+            ],
+            [
+              101.511523,
+              3.183144
+            ],
+            [
+              101.5114189,
+              3.1832838
+            ],
+            [
+              101.5113961,
+              3.1834073
+            ],
+            [
+              101.5114030818612,
+              3.18343
+            ],
+            [
+              101.51207280205128,
+              3.18343
+            ],
+            [
+              101.51207,
+              3.1834236
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

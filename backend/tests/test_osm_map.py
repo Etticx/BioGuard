@@ -27,3 +27,15 @@ def test_shared_map_allows_same_origin_embedding_and_tile_referrer_only(setup):
  assert result.headers['referrer-policy']=='strict-origin-when-cross-origin'
  assert client.get('/health').headers['x-frame-options']=='DENY'
  assert client.get('/officer-assets/vendor/leaflet/leaflet.js').status_code==200
+
+
+def test_management_map_serves_inspection_blocks_and_selection_script(setup):
+ client,*_=setup
+ page=client.get('/maps/elmina')
+ assert '/officer-assets/inspection-blocks.js' in page.text
+ assert client.get('/officer-assets/inspection-blocks.js').status_code==200
+ data=client.get('/officer-assets/elmina-inspection-blocks.geojson').json()
+ assert data['type']=='FeatureCollection'
+ blocks=[f for f in data['features'] if f['properties']['type']=='inspection_block']
+ assert len(blocks)==20
+ assert len({f['properties']['block_id'] for f in blocks})==20

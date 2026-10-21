@@ -1,0 +1,10 @@
+const {test}=require('node:test');const assert=require('node:assert/strict');
+const fs=require('node:fs');const path=require('node:path');
+const root=path.join(__dirname,'../..');
+const {classify}=require(path.join(root,'web/inspection-blocks.js'));
+const data=JSON.parse(fs.readFileSync(path.join(root,'web/elmina-inspection-blocks.geojson'),'utf8'));
+const fixtures=JSON.parse(fs.readFileSync(path.join(__dirname,'block-points.json'),'utf8'));
+test('each of the 20 block interior points selects only its own block',()=>{for(const p of fixtures){const r=classify(data,p.point);assert.equal(r.kind,'block');assert.deepEqual(r.features.map(f=>f.properties.block_id),[p.id]);}});
+test('water wins over overlapping land and supports water boundary points',()=>{const d={features:[{properties:{type:'inspection_block',block_id:'B01'},geometry:{type:'Polygon',coordinates:[[[0,0],[4,0],[4,4],[0,4],[0,0]]]}},{properties:{type:'water',name:'Pond'},geometry:{type:'Polygon',coordinates:[[[1,1],[2,1],[2,2],[1,2],[1,1]]]}}]};assert.equal(classify(d,[1.5,1.5]).kind,'water');assert.equal(classify(d,[1,1]).kind,'water');});
+test('shared block boundary returns both blocks instead of silently choosing one',()=>{const square=(id,x)=>({properties:{type:'inspection_block',block_id:id},geometry:{type:'Polygon',coordinates:[[[x,0],[x+1,0],[x+1,1],[x,1],[x,0]]]}});const r=classify({features:[square('B02',1),square('B01',0)]},[1,0.5]);assert.equal(r.kind,'boundary');assert.deepEqual(r.features.map(f=>f.properties.block_id),['B01','B02']);});
+test('polygon holes, multipolygons and outside/invalid locations are handled',()=>{const f={properties:{type:'inspection_block',block_id:'B01'},geometry:{type:'MultiPolygon',coordinates:[[[[0,0],[3,0],[3,3],[0,3],[0,0]],[[1,1],[2,1],[2,2],[1,2],[1,1]]],[[[5,5],[6,5],[6,6],[5,6],[5,5]]]]}};const d={features:[f]};assert.equal(classify(d,[1.5,1.5]).kind,'unmapped');assert.equal(classify(d,[5.5,5.5]).kind,'block');assert.equal(classify(d,[99,99]).kind,'unmapped');assert.equal(classify(d,[NaN,1]).kind,'unmapped');});

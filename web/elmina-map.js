@@ -31,6 +31,26 @@
   L.polygon([[[-85,-180],[-85,180],[85,180],[85,-180]],[[sw[0],sw[1]],[ne[0],sw[1]],[ne[0],ne[1]],[sw[0],ne[1]]]],{stroke:false,fillColor:'#eaf0e7',fillOpacity:1,interactive:false}).addTo(map);
   if(picker)fixed.hidden=false;
   else L.marker(initial,{icon:L.icon({iconUrl:'/officer-assets/location-pin.svg',iconSize:[36,48],iconAnchor:[18,47]}),keyboard:true,alt:'Reported plant location'}).addTo(map);
+  if(!picker){
+   const label=document.getElementById('block-label');
+   label.hidden=false;label.textContent='Loading location block...';
+   try{
+    const blocksResponse=await fetch('/officer-assets/elmina-inspection-blocks.geojson');
+    if(!blocksResponse.ok)throw new Error('blocks');
+    const blocks=await blocksResponse.json();
+    if(blocks.type!=='FeatureCollection'||!Array.isArray(blocks.features)||!blocks.features.length)throw new Error('blocks');
+    const selected=window.BioGuardBlocks.classify(blocks,[initial[1],initial[0]]);
+    if(selected.kind==='unmapped')label.textContent='No mapped inspection block at this location.';
+    else{
+     const water=selected.kind==='water';
+     const overlay=L.geoJSON({type:'FeatureCollection',features:selected.features},{interactive:false,style:{color:water?'#1679ac':'#ad5400',weight:3,fillColor:water?'#48aadd':'#ffaf42',fillOpacity:0.18}}).addTo(map);
+     const ids=selected.features.map(f=>f.properties.block_id||f.properties.name||'Mapped water').join(' / ');
+     label.textContent=water?'Mapped water: '+ids+' — no land block selected.':selected.kind==='boundary'?'Pin on block boundary: '+ids+'.':'Reported location block: '+ids+'.';
+     const note=document.createElement('small');note.textContent=water?'Water outline is community mapped.':'Prototype inspection area; not a spread prediction.';label.appendChild(note);
+     const box=overlay.getBounds();if(box.isValid())map.fitBounds(box,{padding:[28,55],maxZoom:config.initial_zoom,animate:false});
+    }
+   }catch{label.textContent='Inspection blocks unavailable. The reported pin is still shown.';}
+  }
   map.on('moveend',()=>{if(restrict())return;if(ready&&picker)notify('bioguard:map-point',point());});
   map.on('resize',restrict);
   const observer=new ResizeObserver(()=>{map.invalidateSize({pan:false});restrict();});observer.observe(document.getElementById('map'));
