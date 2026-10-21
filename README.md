@@ -107,7 +107,11 @@ npx eas-cli@latest build --platform android --profile preview
 
 - Create `backend/data/groq-api-key.txt` and paste only your Groq API key into it. This file is ignored by Git. Never put the key in the mobile app.
 - Default model: `openai/gpt-oss-120b`. Optional backend environment override: `GROQ_MODEL` (must support strict structured outputs). You can also set `GROQ_API_KEY` instead of using the key file.
-- Start BioGuard as usual. Management opens a report, enters the confirmed species, then ticks the invasive-species confirmation. A single restoration document appears when Groq finishes. Edit the removal, replacement, replanting and handover sections directly; there is no separate generate button.
+- Start BioGuard as usual. Management opens a report and confirms the species shown by the classifier. Use Correct identification only if the name is wrong. A single restoration document appears when Groq finishes. Edit the removal, replacement, replanting and handover sections directly; there is no separate generate button.
 - Only confirmed species, rough amount seen and Malaysia region are sent to Groq. Photos, reporter details and precise locations are not sent.
-- Review the draft and select an approved replacement yourself. No approved planting catalogue is connected yet, so AI leaves that field blank. Save decision remains the explicit assignment step.
+- The agent researches official botanical pages using Groq browser search, then shows conditional replacement candidates with reasons, site checks and source links. Choose a candidate to fill its scientific name and planting guidance, or enter your own approved species. Unknown site conditions remain checks, not assumptions. Save decision is the explicit approval and assignment step.
 - Missing key or API failure: read the specific error and use Retry draft after correcting it. No model request or work assignment happens merely by opening a report.
+
+- Research uses `GROQ_RESEARCH_MODEL` (default `openai/gpt-oss-20b`). Public botanical evidence is cached for six hours to reduce repeated searches. It needs browser-search support and uses a separate request from structured drafting. If research is unavailable, the draft clearly says so and provides no researched replacement candidates.
+
+- If the default drafting model is rate limited, BioGuard tries `GROQ_FALLBACK_MODEL` (default `openai/gpt-oss-20b`) once. If both are limited, the error remains visible; BioGuard does not invent a successful result.

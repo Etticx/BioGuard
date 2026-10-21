@@ -11,7 +11,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from PIL import Image
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator, HttpUrl
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
 
@@ -66,6 +66,7 @@ class Review(BaseModel):
     removal_instructions: str = Field(default="", max_length=1600)
     replacement_species: str = Field(default="", max_length=160)
     replanting_instructions: str = Field(default="", max_length=1600)
+    research_sources: list[HttpUrl] = Field(default_factory=list, max_length=8)
 
     @model_validator(mode="after")
     def assignment_needs_approval(self):

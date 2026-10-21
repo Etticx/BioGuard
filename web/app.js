@@ -30,13 +30,21 @@ function drawDetail(report){const detail=$('#detail');detail.replaceChildren();c
  const actions=node('details');actions.append(node('summary','Case actions'));const form=node('form',undefined,'review-form');const decision=select(form,'Case action','case_action',[['cancel','Cancel case and active visits'],['duplicate','Link as duplicate'],...(!active?[['reopen','Reopen for review']]:[])]);const candidates=reports.filter(r=>r.id!==report.id&&r.status!=='duplicate');const original=select(form,'Original report','duplicate_of',[['','Choose original'],...candidates.map(r=>[r.id,`${r.reference} · ${r.site} · ${r.landmark}`])]);original.parentElement.hidden=true;decision.addEventListener('change',()=>{original.parentElement.hidden=decision.value!=='duplicate';original.required=decision.value==='duplicate';});const note=text(form,'Reason','case_reason');note.required=true;const err=node('p','','error');const submit=node('button','Save case action','secondary');submit.type='submit';form.append(err,submit);form.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;try{await post(`/reports/${report.id}/review`,{revision:report.revision,decision:decision.value,notes:note.value,duplicate_of:decision.value==='duplicate'?original.value:null});feedback('Case updated.');await loadReports();}catch(f){err.textContent=f.message;submit.disabled=false;}});actions.append(form);detail.append(actions);
  const activity=node('details');activity.append(node('summary','Activity'));const list=node('ol',undefined,'history');for(const event of report.history){const li=node('li',event.action.replaceAll('_',' ')+' · '+event.by);li.append(node('time',new Date(event.at).toLocaleString()));if(event.notes)li.append(node('p',event.notes,'note'));list.append(li);}activity.append(list);detail.append(activity);
 }
+function appendResearchLinks(container,sources){
+ const list=node('ul',undefined,'research-links');
+ for(const source of sources){if(typeof source.url!=='string'||!source.url.startsWith('https://'))continue;const row=node('li'),link=node('a',source.title||source.url);link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';row.append(link);list.append(row);}
+ container.append(list);
+}
 function planFields(form,initial={},report=null,reviewNotes=null){
  if(!report||(initial.id&&initial.work_type!=='restoration'))return legacyPlanFields(form,initial);
  form.append(node('h3','Restoration job'),node('p','One job for removal and approved replanting.','compact-note'));
  const crew=select(form,'Assign ecology team','assigned_team_id',[['','Choose ecology team'],...teams.filter(t=>t.members>0).map(t=>[t.id,t.name])],initial.team_id??initial.assigned_team_id);crew.required=true;
  const due=field(form,'Due date','due_on','input',initial.due_on??'');due.type='date';due.min=today();due.required=true;
- const species=field(form,'Confirmed species','confirmed_species','input',initial.confirmed_species??'');species.maxLength=160;species.required=true;
- const approved=check(form,'I confirmed this invasive species and approve removal at this site.',initial.confirmed_invasive===true);approved.required=true;
+ const classified=report.prediction?.predicted_species??report.review?.confirmed_species??'';
+ const species=field(form,'Correct scientific name','species_correction','input',initial.confirmed_species||classified);species.maxLength=160;species.parentElement.hidden=true;
+ const correction=button('Correct identification',()=>{species.parentElement.hidden=!species.parentElement.hidden;species.required=!species.value.trim();if(!species.parentElement.hidden)species.focus?.();},'text-button');form.append(correction);
+ if(!species.value.trim())species.parentElement.hidden=false;
+ const approved=check(form,`I confirm ${species.value||'this plant'} is invasive and approve removal at this site.`,initial.confirmed_invasive===true);approved.required=true;
  const panel=node('section',undefined,'restoration-draft-panel');panel.hidden=true;form.append(panel);
  const status=node('p','','compact-note');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
  const editor=node('div',undefined,'restoration-document');editor.hidden=true;
@@ -47,34 +55,49 @@ function planFields(form,initial={},report=null,reviewNotes=null){
   body.addEventListener('input',()=>{if(reviewNotes&&key==='review_notes')reviewNotes.value=content(body);});
   sections[key]=body;editor.append(heading,body);
  }
- const retry=button('Retry draft',()=>generate());retry.hidden=true;panel.append(status,editor,retry);
+ const researchPanel=node('div',undefined,'replacement-research');researchPanel.hidden=true;
+ const retry=button('Retry draft',()=>generate());retry.hidden=true;panel.append(status,editor,researchPanel,retry);
+ let researchSources=(initial.research_sources??[]).map(url=>({url,title:url})),lastPlanting='';
+ function renderResearch(result){
+  researchPanel.replaceChildren();researchPanel.hidden=false;researchSources=result.sources??[];
+  researchPanel.append(node('h4','Replacement suggestions'),node('p',result.research_notice??'Check site conditions before approving a replacement.','compact-note'));
+  for(const candidate of result.candidates??[]){
+   const card=node('div',undefined,'replacement-candidate');card.append(node('strong',candidate.common_name?`${candidate.common_name} · ${candidate.scientific_name}`:candidate.scientific_name),node('p',candidate.reason),node('p','Check: '+candidate.site_checks,'compact-note'));
+   card.append(button('Use '+candidate.scientific_name,()=>{sections.replacement_species.textContent=candidate.scientific_name;
+    if(content(sections.replanting_instructions)===lastPlanting){sections.replanting_instructions.textContent=candidate.planting_instructions;lastPlanting=candidate.planting_instructions;}
+    status.textContent='Replacement selected. Review its site checks and edit the plan before saving.';
+   }));appendResearchLinks(card,candidate.sources??[]);researchPanel.append(card);
+  }
+  if(researchSources.length){const details=node('details');details.append(node('summary','Research sources'));appendResearchLinks(details,researchSources);researchPanel.append(details);}
+ }
  let version=0,controller=null;
- function show(){panel.hidden=!approved.checked;if(reviewNotes)reviewNotes.parentElement.hidden=true;}
+ function show(){approved.parentElement.lastChild.textContent=`I confirm ${species.value||'this plant'} is invasive and approve removal at this site.`;panel.hidden=!approved.checked;if(reviewNotes)reviewNotes.parentElement.hidden=true;}
  function cancel(){version++;if(controller)controller.abort();controller=null;if(approved.checked&&editor.hidden){status.textContent='Draft preparation interrupted. Retry to prepare the plan.';retry.hidden=false;}}
  async function generate(){
   cancel();if(!approved.checked)return;const confirmed=species.value.trim();show();retry.hidden=true;
   if(confirmed.length<3){status.textContent='Enter the confirmed species first.';retry.hidden=false;return;}
-  const current=version;controller=new AbortController();status.textContent='Preparing restoration draft…';
+  const current=version;controller=new AbortController();status.textContent='Researching removal and replacement plants, then preparing your draft…';
   const snapshot=Object.fromEntries(Object.entries(sections).map(([key,body])=>[key,content(body)]));
   try{
    const result=await post(`/reports/${report.id}/restoration-draft`,{revision:report.revision,confirmed_species:confirmed,confirmed_invasive:true},{signal:controller.signal});
    if(current!==version||!approved.checked||species.value.trim()!==confirmed||form.hidden||form.isConnected===false)return;
    for(const [key,body] of Object.entries(sections))if(content(body)===snapshot[key])body.textContent=result[key]??'';
    if(reviewNotes)reviewNotes.value=content(sections.review_notes);
-   editor.hidden=false;status.textContent='Review and edit this draft directly. Enter an approved replacement species before saving.';
+   lastPlanting=content(sections.replanting_instructions);renderResearch(result);
+   editor.hidden=false;status.textContent='Review and edit this draft. Choose a researched replacement below or enter your own approved species.';
   }catch(error){if(current!==version||error.name==='AbortError')return;status.textContent=error.message;retry.hidden=false;}
  }
  approved.addEventListener('change',()=>{cancel();show();if(approved.checked&&editor.hidden)void generate();});
- species.addEventListener('input',()=>{cancel();approved.checked=false;editor.hidden=true;for(const body of Object.values(sections))body.textContent='';if(reviewNotes)reviewNotes.value='';show();});
+ species.addEventListener('input',()=>{cancel();approved.checked=false;editor.hidden=true;for(const body of Object.values(sections))body.textContent='';researchPanel.hidden=true;researchSources=[];if(reviewNotes)reviewNotes.value='';show();});
  const initialValues={...initial,review_notes:reviewNotes?.value||initial.notes||''};
- if(initial.removal_instructions||initial.replanting_instructions){for(const [key,body] of Object.entries(sections))body.textContent=initialValues[key]??'';editor.hidden=false;status.textContent='Review and edit this restoration plan directly.';}
+ if(initial.removal_instructions||initial.replanting_instructions){for(const [key,body] of Object.entries(sections))body.textContent=initialValues[key]??'';editor.hidden=false;status.textContent='Review and edit this restoration plan directly.';lastPlanting=content(sections.replanting_instructions);if(researchSources.length)renderResearch({sources:researchSources,candidates:[],research_notice:'Sources retained from the approved plan.'});}
  show();
  const values=()=>{
   if(!approved.checked)throw new Error('Confirm the invasive species first.');
   if(editor.hidden)throw new Error('Wait for the restoration draft, or retry if generation failed.');
   const plan=Object.fromEntries(Object.entries(sections).map(([key,body])=>[key,content(body).trim()]));
   for(const [key,value] of Object.entries(plan)){if(!value)throw new Error('Complete '+labels[key].toLowerCase()+' in the draft.');if(value.length>(key==='replacement_species'?160:1600))throw new Error(labels[key]+' is too long.');}
-  return {work_type:'restoration',assigned_team_id:crew.value,due_on:due.value,priority:initial.priority??'normal',confirmed_species:species.value.trim(),confirmed_invasive:true,removal_instructions:plan.removal_instructions,replacement_species:plan.replacement_species,replanting_instructions:plan.replanting_instructions,notes:plan.review_notes};
+  return {work_type:'restoration',assigned_team_id:crew.value,due_on:due.value,priority:initial.priority??'normal',confirmed_species:species.value.trim(),confirmed_invasive:true,removal_instructions:plan.removal_instructions,replacement_species:plan.replacement_species,replanting_instructions:plan.replanting_instructions,notes:plan.review_notes,research_sources:researchSources.map(source=>source.url).slice(0,8)};
  };
  values.cancel=cancel;return values;
 }
@@ -108,6 +131,7 @@ function drawWork(detail,report,work){
  if(work.legacy)card.append(node('p','Earlier work type. Preserve this record; cancel the active case and reopen it to create a new work step.','compact-note'));
  if(work.requires_reassignment)card.append(node('p','This older job needs an explicit reassignment to an ecology team.','error'));
  for(const [label,key] of [['Confirmed species','confirmed_species'],['Approved removal instructions','removal_instructions'],['Approved replacement','replacement_species'],['Replanting instructions','replanting_instructions']])if(work[key])card.append(fact(label,work[key]));
+ if(work.research_sources?.length){const references=node('details');references.append(node('summary','Plan research sources'));appendResearchLinks(references,work.research_sources.map(url=>({url,title:url})));card.append(references);}
  for(const [index,c] of work.completions.entries()){
   const evidence=node('div',undefined,'evidence-record');evidence.append(node('h3',`Evidence ${index+1}`),fact('Visit date',c.observed_on),node('p',c.notes,'note'));
   for(const [label,key] of [['Plant identified by ecology team','suggested_species'],['Recommended next step','recommended_action'],['Suggested removal method','removal_recommendation'],['Suggested replacement','replacement_recommendation'],['Removed on','removed_on']])if(c[key])evidence.append(fact(label,c[key]));
