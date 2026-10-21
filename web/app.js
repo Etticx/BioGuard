@@ -29,13 +29,46 @@ function drawLocation(container,report){
  if(!valid){section.append(node('p',pin?'This map location cannot be displayed.':'No map pin was saved with this report.','compact-note'));container.append(section);return;}
  const layout=node('div',undefined,'report-location-layout'),figure=node('figure',undefined,'report-location-figure');
  const frame=node('div',undefined,'report-location-map'),image=node('img',undefined,'report-location-image');
- image.src='/officer-assets/elmina-city-centre-demo.png';image.alt='Elmina City Centre demo map';image.width=642;image.height=453;
+ image.src='/officer-assets/elmina-city-centre-demo.png';image.alt='Elmina City Centre demo map';image.width=642;image.height=453;image.draggable=false;
  const marker=node('img',undefined,'report-location-pin');marker.src='/officer-assets/location-pin.svg';marker.alt='Plant location selected by the reporter';marker.style.left=(pin.x*100)+'%';marker.style.top=(pin.y*100)+'%';
  image.addEventListener('error',()=>{frame.hidden=true;figure.append(node('p','The location map could not load. Refresh to try again.','compact-note'));});
- frame.append(image,marker);figure.append(frame,node('figcaption','Red pin: location selected by the reporter.','compact-note'));
+ frame.append(image,marker);enableLocationGestures(frame,image,marker,pin);figure.append(frame,node('figcaption','Scroll or pinch to zoom. Drag to move. Red pin: reported plant location.','compact-note'));
  const information=node('div',undefined,'report-location-info');
  information.append(node('span','Site','fact-label'),node('p',report.site),node('span','Nearby landmark','fact-label'),node('p',report.landmark),node('p','Demo map position, not GPS coordinates.','compact-note'));
  layout.append(figure,information);section.append(layout);container.append(section);
+}
+function enableLocationGestures(frame,image,marker,pin){
+ let zoom=1,x=0,y=0,start=null;const pointers=new Map();
+ frame.tabIndex=0;frame.setAttribute('aria-label','Plant location map. Scroll or pinch to zoom; drag to move.');
+ const limit=value=>Math.max(1,Math.min(5,value));
+ function render(){
+  const box=frame.getBoundingClientRect();if(!box.width||!box.height)return;
+  x=Math.max(box.width*(1-zoom),Math.min(0,x));y=Math.max(box.height*(1-zoom),Math.min(0,y));
+  image.style.transform=`translate(${x}px, ${y}px) scale(${zoom})`;
+  marker.style.left=(pin.x*zoom+x/box.width)*100+'%';marker.style.top=(pin.y*zoom+y/box.height)*100+'%';
+ }
+ function zoomAt(next,anchor){const ratio=next/zoom;x=anchor.x-(anchor.x-x)*ratio;y=anchor.y-(anchor.y-y)*ratio;zoom=next;render();}
+ function sample(){const points=[...pointers.values()];if(!points.length)return null;const [a,b]=points;return b?{x:(a.x+b.x)/2,y:(a.y+b.y)/2,distance:Math.hypot(a.x-b.x,a.y-b.y)}:{...a,distance:0};}
+ function begin(){const point=sample();start=point?{...point,zoom,xOffset:x,yOffset:y}:null;}
+ function local(event){const box=frame.getBoundingClientRect();return{x:event.clientX-box.left,y:event.clientY-box.top};}
+ frame.addEventListener('wheel',event=>{
+  event.preventDefault();const box=frame.getBoundingClientRect();const pixels=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?box.height:1);
+  zoomAt(limit(zoom*Math.exp(-pixels*0.002)),local(event));begin();
+ },{passive:false});
+ frame.addEventListener('pointerdown',event=>{
+  if(event.button!==0)return;event.preventDefault();pointers.set(event.pointerId,local(event));frame.setPointerCapture(event.pointerId);frame.style.cursor='grabbing';begin();
+ });
+ frame.addEventListener('pointermove',event=>{
+  if(!pointers.has(event.pointerId)||!start)return;event.preventDefault();pointers.set(event.pointerId,local(event));const current=sample();
+  const next=limit(start.distance>0?start.zoom*current.distance/start.distance:start.zoom),ratio=next/start.zoom;
+  x=current.x-(start.x-start.xOffset)*ratio;y=current.y-(start.y-start.yOffset)*ratio;zoom=next;render();
+ });
+ function end(event){pointers.delete(event.pointerId);begin();frame.style.cursor=pointers.size?'grabbing':'grab';}
+ frame.addEventListener('pointerup',end);frame.addEventListener('pointercancel',end);frame.addEventListener('lostpointercapture',end);
+ frame.addEventListener('keydown',event=>{
+  const box=frame.getBoundingClientRect();if(['+','=','-'].includes(event.key)){event.preventDefault();zoomAt(limit(zoom*(event.key==='-'?1/1.2:1.2)),{x:box.width/2,y:box.height/2});}
+  else if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){event.preventDefault();x+=event.key==='ArrowLeft'?30:event.key==='ArrowRight'?-30:0;y+=event.key==='ArrowUp'?30:event.key==='ArrowDown'?-30:0;render();}
+ });
 }
 function drawDetail(report){const detail=$('#detail');detail.replaceChildren();const top=node('div',undefined,'detail-top');top.append(node('span',report.reference,'reference'),badge(report.status));detail.append(top,node('h2',report.site),node('p',[report.block_name,report.landmark].filter(Boolean).join(' · '),'detail-location'));photos(detail,report,report.photos.filter(p=>!p.work_id).map(p=>p.id));
  const suggestion=node('div',undefined,'suggestion');if(report.prediction){const p=report.prediction;suggestion.append(node('span',`${(p.confidence*100).toFixed(1)}%`,'confidence'),node('span','MODEL SUGGESTION','eyebrow'),node('h3',p.common_name),node('p',p.predicted_species,'scientific'),node('p',p.uncertain_identification?'Not confident · review needed':p.sdp_listed_invasive?'Invasive · SDP list':'Not listed as invasive · SDP list','compact-note'));}else if(report.review?.confirmed_species&&report.review.confirmed_invasive===true)suggestion.append(node('span','MANAGEMENT CONFIRMED','eyebrow'),node('h3',report.review.confirmed_species),node('p','Invasive identification confirmed for this site.','compact-note'));else suggestion.append(node('h3','Identification pending'),node('p','Confirm the plant from the photos or request clearer evidence before assigning restoration.','compact-note'));if(report.identification_questioned)suggestion.append(node('p','The reporter questioned this identification.','error'));detail.append(suggestion);
