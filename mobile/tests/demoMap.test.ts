@@ -1,3 +1,5 @@
+import {readFileSync} from 'node:fs';
+import {MAP_WIDTH,MAP_HEIGHT} from '../src/services/demoMap';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DEMO_MAP_ID, clampPoint, panPoint, imageFrame, isDemoPin } from '../src/services/demoMap';
@@ -22,4 +24,9 @@ test('pin stays aligned to the selected map point across zoom and viewport chang
 test('saved demo pins survive draft JSON without inventing GPS coordinates',()=>{
  const saved=JSON.parse(JSON.stringify({...details,demo_pin:{map_id:DEMO_MAP_ID,x:0.72,y:0.83}}));
  assert.equal(saved.demo_pin.x,0.72);assert.equal(saved.latitude,undefined);assert.equal(isDemoPin(saved.demo_pin),true);
+});
+
+test('picker geometry matches the bundled PNG dimensions',()=>{
+ const png=readFileSync(new URL('../assets/elmina-city-centre-demo.png',import.meta.url));
+ assert.equal(MAP_WIDTH,png.readUInt32BE(16));assert.equal(MAP_HEIGHT,png.readUInt32BE(20));
 });

@@ -1,6 +1,6 @@
 export const DEMO_MAP_ID = 'elmina-city-centre-v1' as const;
 export const MAP_WIDTH = 642;
-export const MAP_HEIGHT = 485;
+export const MAP_HEIGHT = 453;
 export type Point = { x:number; y:number };
 export type DemoPin = Point & { map_id:typeof DEMO_MAP_ID };
 export type Size = { width:number; height:number };
