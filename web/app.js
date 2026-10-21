@@ -60,7 +60,7 @@ function planFields(form,initial={},report=null,reviewNotes=null){
  let researchSources=(initial.research_sources??[]).map(url=>({url,title:url})),lastPlanting='';
  function renderResearch(result){
   researchPanel.replaceChildren();researchPanel.hidden=false;researchSources=result.sources??[];
-  researchPanel.append(node('h4','Replacement suggestions'),node('p',result.research_notice??'Check site conditions before approving a replacement.','compact-note'));
+  researchPanel.append(node('h4','Replacement guidance'),node('p',result.research_notice??'Check site conditions before approving a replacement.','compact-note'));
   for(const candidate of result.candidates??[]){
    const card=node('div',undefined,'replacement-candidate');card.append(node('strong',candidate.common_name?`${candidate.common_name} · ${candidate.scientific_name}`:candidate.scientific_name),node('p',candidate.reason),node('p','Check: '+candidate.site_checks,'compact-note'));
    card.append(button('Use '+candidate.scientific_name,()=>{sections.replacement_species.textContent=candidate.scientific_name;
@@ -84,7 +84,7 @@ function planFields(form,initial={},report=null,reviewNotes=null){
    for(const [key,body] of Object.entries(sections))if(content(body)===snapshot[key])body.textContent=result[key]??'';
    if(reviewNotes)reviewNotes.value=content(sections.review_notes);
    lastPlanting=content(sections.replanting_instructions);renderResearch(result);
-   editor.hidden=false;status.textContent='Review and edit this draft. Choose a researched replacement below or enter your own approved species.';
+   editor.hidden=false;status.textContent='Review all four sections, including the proposed replacement. Edit directly before saving.';
   }catch(error){if(current!==version||error.name==='AbortError')return;status.textContent=error.message;retry.hidden=false;}
  }
  approved.addEventListener('change',()=>{cancel();show();if(approved.checked&&editor.hidden)void generate();});

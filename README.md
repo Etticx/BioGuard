@@ -105,13 +105,12 @@ npx eas-cli@latest build --platform android --profile preview
 
 ## AI restoration drafts (testing/aiagent)
 
-- Create `backend/data/groq-api-key.txt` and paste only your Groq API key into it. This file is ignored by Git. Never put the key in the mobile app.
-- Default model: `openai/gpt-oss-120b`. Optional backend environment override: `GROQ_MODEL` (must support strict structured outputs). You can also set `GROQ_API_KEY` instead of using the key file.
-- Start BioGuard as usual. Management opens a report and confirms the species shown by the classifier. Use Correct identification only if the name is wrong. A single restoration document appears when Groq finishes. Edit the removal, replacement, replanting and handover sections directly; there is no separate generate button.
-- Only confirmed species, rough amount seen and Malaysia region are sent to Groq. Photos, reporter details and precise locations are not sent.
-- The agent researches official botanical pages using Groq browser search, then shows conditional replacement candidates with reasons, site checks and source links. Choose a candidate to fill its scientific name and planting guidance, or enter your own approved species. Unknown site conditions remain checks, not assumptions. Save decision is the explicit approval and assignment step.
-- Missing key or API failure: read the specific error and use Retry draft after correcting it. No model request or work assignment happens merely by opening a report.
-
-- Research uses `GROQ_RESEARCH_MODEL` (default `openai/gpt-oss-20b`). Public botanical evidence is cached for six hours to reduce repeated searches. It needs browser-search support and uses a separate request from structured drafting. If research is unavailable, the draft clearly says so and provides no researched replacement candidates.
-
-- If the default drafting model is rate limited, BioGuard tries `GROQ_FALLBACK_MODEL` (default `openai/gpt-oss-20b`) once. If both are limited, the error remains visible; BioGuard does not invent a successful result.
+- Put only your Groq API key in `backend/data/groq-api-key.txt` (ignored by Git), or set backend `GROQ_API_KEY`. Never put it in the mobile app.
+- Restart the backend after code updates, then refresh management with Ctrl + F5.
+- Confirm the classified species. Correct identification is available if needed. One Groq request researches and returns removal, a proposed replacement species, replanting and the handover note together. Edit the draft before Save decision.
+- The replacement is a proposal for management approval. Site conditions still need checking. Sources come from the actual browser-tool results, not invented links. If the response is incomplete or unsupported, BioGuard shows an error without making another request.
+- Default model: `openai/gpt-oss-120b`; optional `GROQ_MODEL` must support Groq browser search. There is no automatic model fallback, formatter request or automatic retry.
+- Same report revision and confirmed species: reuse the draft for 15 minutes with zero extra Groq requests. A new revision or corrected species is a new draft.
+- New attempts: at least 30 seconds apart, maximum 10 per management account per hour and 30 total per hour. Failed attempts count too. Blocked requests use no Groq call. Limits and cache apply to this backend process and reset when it restarts; run one backend worker for this beta.
+- Only confirmed species, rough amount and Malaysia region are sent. No photos, precise coordinates, reporter details or report history are sent.
+- Groq's own token quotas still apply. A request can contain browser-tool work and multiple output sections while remaining one outgoing BioGuard API request. No live Groq requests are needed to run the offline budget tests.

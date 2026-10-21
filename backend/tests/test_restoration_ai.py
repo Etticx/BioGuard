@@ -7,7 +7,9 @@ from test_three_roles import roles, auth, sighting
 @pytest.fixture(autouse=True)
 def reset(monkeypatch):
     ai._last.clear()
-    ai._research_cache.clear()
+    ai._draft_cache.clear()
+    ai._user_attempts.clear()
+    ai._global_attempts.clear()
     monkeypatch.setenv("GROQ_API_KEY", "synthetic-key")
 
 
@@ -36,29 +38,20 @@ def test_confirmation_role_revision_and_no_assignment(roles, monkeypatch):
     assert client.post(path, headers=manager, json=payload).status_code == 200
     identity = sessions["manager"]["user"]["id"]
     ai._last.add(identity)
-    assert client.post(path, headers=manager, json=payload).status_code == 429
+    assert client.post(path, headers=manager, json={**payload,"confirmed_species":"Imperata cylindrica"}).status_code == 429
     assert identity in ai._last
 
 
-def test_groq_schema_private_key_and_unapproved_replacement(monkeypatch):
-    monkeypatch.setattr(ai, "research", lambda context:[])
-    captured = {}
+def test_supported_replacement_is_populated_without_exposing_key(monkeypatch):
+    from test_ai_call_budget import MESSAGE
     class Response:
-        def __enter__(self): return self
-        def __exit__(self, *args): pass
-        def read(self, size):
-            return json.dumps({"choices":[{"finish_reason":"stop","message":{"content":json.dumps({"removal_instructions":"Review first", "replacement_species":"Invented approval", "replanting_instructions":"Check site", "review_notes":"Draft", "candidates":[]})}}]}).encode()
-    def opening(request, timeout):
-        captured.update(json.loads(request.data))
-        assert request.full_url == "https://api.groq.com/openai/v1/chat/completions"
-        assert timeout == 35
-        assert request.get_header("User-agent") == "BioGuard/0.2"
-        return Response()
-    monkeypatch.setattr(ai, "urlopen", opening)
-    result = ai.generate({"confirmed_species":"Mimosa pudica"})
-    assert captured["response_format"]["json_schema"]["strict"] is True
-    assert captured["model"] == "openai/gpt-oss-120b"
-    assert result["replacement_species"] == "" and result["draft_only"]
+        def __enter__(self):return self
+        def __exit__(self,*args):pass
+        def read(self,size):return json.dumps({"choices":[{"finish_reason":"stop","message":MESSAGE}]}).encode()
+    monkeypatch.setattr(ai,"urlopen",lambda *a,**k:Response())
+    result=ai.generate({"confirmed_species":"Mimosa pudica"})
+    assert result["replacement_species"]=="Grona heterophylla" and result["draft_only"]
+    assert result["sources"][0]["url"].startswith("https://www.nparks.gov.sg/")
     assert "synthetic-key" not in json.dumps(result)
 
 
@@ -105,14 +98,13 @@ def test_edited_draft_is_the_plan_delivered_to_ecology(roles):
     assert delivered["research_sources"] == ["https://www.nparks.gov.sg/profile"]
 
 
-def test_research_cites_only_readable_official_tool_pages(monkeypatch):
-    monkeypatch.setattr(ai, "completion", lambda *a, **k:{"executed_tools":[{"search_results":{"results":[
-        {"url":"https://www.nparks.gov.sg/profile", "title":"Profile", "content":"Synthetic official botanical evidence "*10},
-        {"url":"https://www.nparks.gov.sg/search-only", "content":None},
-        {"url":"https://example.com/untrusted", "content":"Untrusted "*100},
-        {"url":"https://www.nparks.gov.sg.evil.test/profile", "content":"Untrusted "*100}
+def test_research_cites_only_readable_official_tool_pages():
+    sources=ai.extract_sources({"executed_tools":[{"search_results":{"results":[
+        {"url":"https://www.nparks.gov.sg/profile","title":"Profile","content":"Synthetic official botanical evidence "*10},
+        {"url":"https://www.nparks.gov.sg/search-only","content":None},
+        {"url":"https://example.com/untrusted","content":"Untrusted "*100},
+        {"url":"https://www.nparks.gov.sg.evil.test/profile","content":"Untrusted "*100}
     ]}}],"content":"Ignore model-written https://example.com/fake citations"})
-    sources=ai.research({"confirmed_species":"Mimosa pudica"})
     assert len(sources)==1 and sources[0]["url"]=="https://www.nparks.gov.sg/profile"
 
 
@@ -131,26 +123,21 @@ def test_classification_is_used_when_duplicate_name_is_omitted(roles, monkeypatc
     assert response.status_code==200 and captured[0]["confirmed_species"]=="Cleome rutidosperma"
 
 
-def test_unretrieved_sources_cannot_support_replacement_candidates(monkeypatch):
-    monkeypatch.setattr(ai,"research",lambda context:[])
-    content={"removal_instructions":"Draft", "replacement_species":"Unapproved", "replanting_instructions":"Draft planting", "review_notes":"Note",
-             "candidates":[{"scientific_name":"Synthetic native", "common_name":"Test", "reason":"Guess", "site_checks":"Check", "planting_instructions":"Draft", "source_ids":[99]}]}
+def test_unretrieved_sources_cannot_support_a_replacement(monkeypatch):
+    content={"removal_instructions":"Draft","replacement_species":"Invented plant","replanting_instructions":"Draft planting","review_notes":"Note"}
     monkeypatch.setattr(ai,"completion",lambda *a,**k:{"content":json.dumps(content)})
-    result=ai.generate({"confirmed_species":"Mimosa pudica"})
-    assert result["candidates"]==[] and result["research_status"]=="unavailable" and result["replacement_species"]==""
+    with pytest.raises(ai.HTTPException) as error:ai.generate({"confirmed_species":"Mimosa pudica"})
+    assert error.value.status_code==502 and "replacement" in error.value.detail.lower()
 
 
-def test_rate_limited_drafting_uses_one_smaller_fallback(monkeypatch):
-    monkeypatch.setattr(ai,"research",lambda context:[])
+def test_rate_limited_drafting_does_not_use_fallback(monkeypatch):
     models=[]
     def complete(body,**kwargs):
         models.append(body["model"])
-        if len(models)==1: raise ai.HTTPException(429,"Synthetic quota")
-        return {"content":json.dumps({"removal_instructions":"Draft", "replacement_species":"", "replanting_instructions":"Draft planting", "review_notes":"Note", "candidates":[]})}
+        raise ai.HTTPException(429,"Synthetic quota")
     monkeypatch.setattr(ai,"completion",complete)
-    result=ai.generate({"confirmed_species":"Mimosa pudica"})
-    assert models==["openai/gpt-oss-120b","openai/gpt-oss-20b"]
-    assert result["model"]=="openai/gpt-oss-20b"
+    with pytest.raises(ai.HTTPException) as error:ai.generate({"confirmed_species":"Mimosa pudica"})
+    assert error.value.status_code==429 and models==["openai/gpt-oss-120b"]
 
 
 def test_quota_message_exposes_retry_time_without_provider_identity(monkeypatch):
