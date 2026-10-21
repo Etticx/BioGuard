@@ -19,3 +19,9 @@ export function imageFrame(viewport:Size,point:Point,zoom:number){
  const width=MAP_WIDTH*scale,height=MAP_HEIGHT*scale;
  return {width,height,left:viewport.width/2-point.x*width,top:viewport.height/2-point.y*height};
 }
+
+export function clampZoom(zoom:number){return Math.max(1,Math.min(5,zoom));}
+export function wheelZoom(zoom:number,delta:number,mode:number,pageHeight:number){
+ const pixels=delta*(mode===1?16:mode===2?pageHeight:1);
+ return clampZoom(zoom*Math.exp(-pixels*0.002));
+}

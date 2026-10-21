@@ -126,7 +126,7 @@ npx eas-cli@latest build --platform android --profile preview
 
 ## Elmina demo map pin
 
-- New reports in the updated app require **Pin plant location**. Pan/zoom the supplied Elmina City Centre image beneath the fixed red pin, then tap **Done**. Cancel leaves the previous selection unchanged.
+- New reports in the updated app require **Pin plant location**. Drag the supplied Elmina City Centre image beneath the fixed red pin. Scroll with a mouse/trackpad on a laptop or pinch with two fingers on a phone to zoom, then tap **Done**. Cancel leaves the previous selection unchanged.
 - The map is bundled for offline use. Confirmed points are saved with drafts and reports as image positions (`demo_pin`, map version `elmina-city-centre-v1`), separate from GPS coordinates.
 - This checkpoint does not predict spread or identify water features. The illustrated map has not been geographically calibrated or field-verified.
 - Restart the local Web launcher to rebuild its exported app; Expo users reload the project. Previously installed APKs need a new build to receive these changes.

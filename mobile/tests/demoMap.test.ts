@@ -2,7 +2,7 @@ import {readFileSync} from 'node:fs';
 import {MAP_WIDTH,MAP_HEIGHT} from '../src/services/demoMap';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DEMO_MAP_ID, clampPoint, panPoint, imageFrame, isDemoPin } from '../src/services/demoMap';
+import { DEMO_MAP_ID, clampPoint, panPoint, imageFrame, isDemoPin, wheelZoom } from '../src/services/demoMap';
 import { validateReportDetails, type ReportDetails } from '../src/services/reportContract';
 const details:ReportDetails={site:'Elmina City Centre',landmark:'Lake edge',extent:'few',observed_on:'2026-01-01',notes:'',request_key:'synthetic_map_report',location_mode:'demo_map'};
 test('demo submission requires an explicitly confirmed point',()=>{
@@ -29,4 +29,12 @@ test('saved demo pins survive draft JSON without inventing GPS coordinates',()=>
 test('picker geometry matches the bundled PNG dimensions',()=>{
  const png=readFileSync(new URL('../assets/elmina-city-centre-demo.png',import.meta.url));
  assert.equal(MAP_WIDTH,png.readUInt32BE(16));assert.equal(MAP_HEIGHT,png.readUInt32BE(20));
+});
+
+test('wheel and trackpad zoom in both directions with consistent pixel, line and page deltas',()=>{
+ assert.ok(wheelZoom(2,-120,0,600)>2);assert.ok(wheelZoom(2,120,0,600)<2);
+ assert.equal(wheelZoom(2,3,1,600),wheelZoom(2,48,0,600));
+ assert.equal(wheelZoom(2,1,2,600),wheelZoom(2,600,0,600));
+ assert.equal(wheelZoom(1,10000,0,600),1);assert.equal(wheelZoom(5,-10000,0,600),5);
+ assert.equal(wheelZoom(2,0,0,600),2);
 });
