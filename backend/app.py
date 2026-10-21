@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from records import Records
 from reporting import router as reporting_router, user_from
 from workflow_api import router as workflow_router
+from restoration_ai import router as restoration_ai_router
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
@@ -107,6 +108,7 @@ def create_app(predictor_factory=None, data_dir=None, seed_accounts=True, privat
 
     api.include_router(reporting_router)
     api.include_router(workflow_router)
+    api.include_router(restoration_ai_router)
     api.mount("/officer-assets", StaticFiles(directory=Path(__file__).parent.parent / "web"), name="officer-assets")
 
     @api.get("/health")

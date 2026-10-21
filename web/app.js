@@ -30,7 +30,7 @@ function drawDetail(report){const detail=$('#detail');detail.replaceChildren();c
  const actions=node('details');actions.append(node('summary','Case actions'));const form=node('form',undefined,'review-form');const decision=select(form,'Case action','case_action',[['cancel','Cancel case and active visits'],['duplicate','Link as duplicate'],...(!active?[['reopen','Reopen for review']]:[])]);const candidates=reports.filter(r=>r.id!==report.id&&r.status!=='duplicate');const original=select(form,'Original report','duplicate_of',[['','Choose original'],...candidates.map(r=>[r.id,`${r.reference} · ${r.site} · ${r.landmark}`])]);original.parentElement.hidden=true;decision.addEventListener('change',()=>{original.parentElement.hidden=decision.value!=='duplicate';original.required=decision.value==='duplicate';});const note=text(form,'Reason','case_reason');note.required=true;const err=node('p','','error');const submit=node('button','Save case action','secondary');submit.type='submit';form.append(err,submit);form.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;try{await post(`/reports/${report.id}/review`,{revision:report.revision,decision:decision.value,notes:note.value,duplicate_of:decision.value==='duplicate'?original.value:null});feedback('Case updated.');await loadReports();}catch(f){err.textContent=f.message;submit.disabled=false;}});actions.append(form);detail.append(actions);
  const activity=node('details');activity.append(node('summary','Activity'));const list=node('ol',undefined,'history');for(const event of report.history){const li=node('li',event.action.replaceAll('_',' ')+' · '+event.by);li.append(node('time',new Date(event.at).toLocaleString()));if(event.notes)li.append(node('p',event.notes,'note'));list.append(li);}activity.append(list);detail.append(activity);
 }
-function planFields(form,initial={}){
+function planFields(form,initial={},report=null,reviewNotes=null){
  const kind={value:initial.id?initial.work_type:'restoration'};form.append(node('h3',kind.value==='restoration'?'Restoration job':workNames[kind.value]),node('p',kind.value==='restoration'?'Remove the invasive plant and replant with the approved replacement.':'Existing assignment · original instructions retained.','compact-note'));
  const crew=select(form,'Assign ecology team','assigned_team_id',[['','Choose ecology team'],...teams.filter(t=>t.members>0).map(t=>[t.id,t.name])],initial.team_id??initial.assigned_team_id);crew.required=true;
  const due=field(form,'Due date','due_on','input',initial.due_on??'');due.type='date';due.min=today();due.required=true;
@@ -39,7 +39,22 @@ function planFields(form,initial={}){
  const removal=text(form,'Approved removal instructions','removal_instructions',initial.removal_instructions);
  const replacement=field(form,'Approved replacement species','replacement_species','input',initial.replacement_species);replacement.maxLength=160;
  const planting=text(form,'Replanting instructions','replanting_instructions',initial.replanting_instructions);
- function adjust(){const removes=['restoration','removal'].includes(kind.value),plants=['restoration','replanting'].includes(kind.value);species.parentElement.hidden=!removes;species.required=removes;approved.parentElement.hidden=!removes;approved.required=removes;removal.parentElement.hidden=!removes;removal.required=removes;replacement.parentElement.hidden=!plants;planting.parentElement.hidden=!plants;replacement.required=planting.required=plants;}
+ const assistant=node('div',undefined,'ai-draft');assistant.setAttribute('aria-live','polite');form.insertBefore(assistant,removal.parentElement);
+ let generation=0,busy=false;const generated=new Map();
+ const message=node('p','Confirm the species to prepare an editable draft.','compact-note');
+ const draftButton=button('Draft instructions with AI',()=>draft());assistant.append(draftButton,message);
+ async function draft(){
+  if(!report||!approved.checked||busy||!species.value.trim())return;
+  const token=++generation,confirmed=species.value.trim();busy=true;draftButton.disabled=true;message.textContent='Preparing draft…';
+  try{const result=await post(`/reports/${report.id}/restoration-draft`,{revision:report.revision,confirmed_species:confirmed,confirmed_invasive:true});
+   if(token!==generation||!approved.checked||species.value.trim()!==confirmed||form.hidden||form.isConnected===false)return;
+   for(const [input,key] of [[removal,'removal_instructions'],[replacement,'replacement_species'],[planting,'replanting_instructions'],[reviewNotes,'review_notes']])if(input&&!input.value.trim()&&result[key]){input.value=result[key];generated.set(input,input.value);}
+   message.textContent=result.notice+' Existing text was kept.';
+  }catch(error){if(token===generation)message.textContent=error.message;}finally{busy=false;draftButton.disabled=false;}
+ }
+ approved.addEventListener('change',()=>{generation++;adjust();if(approved.checked)draft();});
+ species.addEventListener('input',()=>{generation++;approved.checked=false;for(const [input,value] of generated)if(input.value===value)input.value='';generated.clear();message.textContent='Confirm the changed species before drafting.';adjust();});
+ function adjust(){const removes=['restoration','removal'].includes(kind.value),plants=['restoration','replanting'].includes(kind.value);species.parentElement.hidden=!removes;species.required=removes;approved.parentElement.hidden=!removes;approved.required=removes;const visible=!removes||approved.checked;assistant.hidden=!report||!removes||!visible;removal.parentElement.hidden=!removes||!visible;removal.required=removes&&visible;replacement.parentElement.hidden=!plants||!visible;planting.parentElement.hidden=!plants||!visible;replacement.required=planting.required=plants&&visible;if(reviewNotes&&report)reviewNotes.parentElement.hidden=!visible;}
  adjust();
  return ()=>({work_type:kind.value,assigned_team_id:crew.value,due_on:due.value,priority:initial.priority??'normal',confirmed_species:species.value.trim(),confirmed_invasive:['restoration','removal'].includes(kind.value)?approved.checked:null,removal_instructions:['restoration','removal'].includes(kind.value)?removal.value.trim():'',replacement_species:['restoration','replanting'].includes(kind.value)?replacement.value.trim():'',replanting_instructions:['restoration','replanting'].includes(kind.value)?planting.value.trim():''});
 }
@@ -47,10 +62,11 @@ function drawReview(detail,report){
  detail.append(node('hr',undefined,'divider'),node('h3','Next step'));
  const form=node('form',undefined,'review-form');
  const decision=select(form,'Decision','decision',[['assign','Assign restoration job'],['request_info','Request more information'],['no_action','Close — no work needed']]);
- const work=node('div',undefined,'work-fields');form.append(work);const values=planFields(work);
+ const work=node('div',undefined,'work-fields');form.append(work);
  const notes=text(form,'Instructions or review note','review_notes');notes.required=true;
+ const values=planFields(work,{},report,notes);
  const err=node('p','','error'),submit=node('button','Save decision','primary');submit.type='submit';form.append(err,submit);
- decision.addEventListener('change',()=>{work.hidden=decision.value!=='assign';for(const input of work.querySelectorAll('input,select,textarea'))input.disabled=work.hidden;});
+ decision.addEventListener('change',()=>{work.hidden=decision.value!=='assign';notes.parentElement.hidden=decision.value==='assign'&&!work.querySelector('input[type=checkbox]').checked;for(const input of work.querySelectorAll('input,select,textarea'))input.disabled=work.hidden;});
  form.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;try{await post(`/reports/${report.id}/review`,{revision:report.revision,decision:decision.value,notes:notes.value.trim(),...(decision.value==='assign'?values():{})});feedback('Decision saved.');await loadReports();await loadNotices();}catch(f){err.textContent=f.message;submit.disabled=false;}});detail.append(form);
 }
 function drawWork(detail,report,work){
@@ -79,7 +95,7 @@ function drawWork(detail,report,work){
   form.addEventListener('submit',async e=>{e.preventDefault();const decision=e.submitter?.value??'accept';if(!notes.value.trim()){err.textContent='Add a review note.';return;}approve.disabled=changes.disabled=true;try{const body={revision:work.revision,decision,notes:notes.value.trim()};if(decision==='accept'&&more.checked)body.next_plan={revision:report.revision,decision:'assign',notes:notes.value.trim(),...values()};await post(`/reports/${report.id}/work/${work.id}/verify`,body);feedback(decision==='corrections'?'Changes requested.':'Evidence approved.');await loadReports();await loadNotices();}catch(f){err.textContent=f.message;approve.disabled=changes.disabled=false;}});card.append(form);
  }
  if(!work.legacy&&['assigned','accepted','in_progress','blocked','correction_requested'].includes(work.status)){
-  const revise=node('details');revise.append(node('summary','Change instructions or ecology team'));const form=node('form');const values=planFields(form,work),note=text(form,'Reason for change','change_reason');note.required=true;const err=node('p','','error'),submit=node('button','Save changes','secondary');submit.type='submit';form.append(err,submit);
+  const revise=node('details');revise.append(node('summary','Change instructions or ecology team'));const form=node('form');const values=planFields(form,work,report),note=text(form,'Reason for change','change_reason');note.required=true;const err=node('p','','error'),submit=node('button','Save changes','secondary');submit.type='submit';form.append(err,submit);
   form.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;try{await post(`/reports/${report.id}/work/${work.id}/revise`,{revision:work.revision,decision:'assign',notes:note.value.trim(),...values()});feedback('Job updated.');await loadReports();}catch(f){err.textContent=f.message;submit.disabled=false;}});revise.append(form);card.append(revise);
  }
  const history=node('details');history.append(node('summary','Job history'));for(const event of work.history)history.append(node('p',`${event.action.replaceAll('_',' ')} · ${event.by??'System'}${event.notes?' · '+event.notes:''}`,'compact-note'));card.append(history);
