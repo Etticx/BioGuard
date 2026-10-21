@@ -22,7 +22,7 @@ function fixture(){
  const values=context.planFields(form,{}, {id:'synthetic',revision:1,prediction:{predicted_species:'Mimosa pudica'}},notes);
  const all=[];function walk(e){all.push(e);for(const c of e.children)walk(c);}walk(form);
  const paragraphs=all.filter(e=>e.className==='draft-paragraph');
- return {requests,form,notes,all,values,paragraphs,fail:()=>reject(new Error('Provider rejected key')),finish:(extra={})=>complete({removal_instructions:'Draft removal',replacement_species:'',replanting_instructions:'Draft planting',review_notes:'Draft note',notice:'Review draft',...extra}),
+ return {requests,form,notes,all,values,paragraphs,fail:(extra={})=>reject(Object.assign(new Error('Provider rejected key'),extra)),finish:(extra={})=>complete({removal_instructions:'Draft removal',replacement_species:'',replanting_instructions:'Draft planting',review_notes:'Draft note',notice:'Review draft',...extra}),
  species:all.find(e=>e.name==='species_correction'),checkbox:all.find(e=>e.type==='checkbox'),editor:all.find(e=>e.className==='restoration-document'),panel:all.find(e=>e.className==='restoration-draft-panel'),retry:all.find(e=>e.textContent==='Retry draft')};
 }
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
@@ -58,4 +58,40 @@ test('researched candidate selection fills the species and its planting guidance
  const all=[];function walk(e){all.push(e);for(const child of e.children)walk(child);}walk(f.form);
  all.find(e=>e.textContent==='Use Synthetic native').dispatch('click');await tick();
  const plan=f.values();assert.equal(plan.replacement_species,'Synthetic native');assert.equal(plan.replanting_instructions,'Candidate planting instructions');assert.equal(plan.research_sources[0],'https://www.nparks.gov.sg/test');
+});
+
+test('inline numbered output is displayed as separate steps',async()=>{
+ const f=fixture();confirm(f);f.finish({removal_instructions:'1. Wear gloves. 2. Pull carefully; keep a 2.5 cm sample. 3. Bag fragments.',replanting_instructions:'1) Check the site. 2) Plant if approved. 3) Take a photo.'});await tick();
+ assert.equal(f.paragraphs[0].textContent,'1. Wear gloves.\n2. Pull carefully; keep a 2.5 cm sample.\n3. Bag fragments.');
+ assert.equal(f.paragraphs[2].textContent,'1. Check the site.\n2. Plant if approved.\n3. Take a photo.');
+});
+
+
+test('Groq failure automatically starts exactly one local backup request',async()=>{
+ const f=fixture();assert.equal(f.all.some(e=>e.textContent==='Use local backup'),false);
+ confirm(f);f.fail({localBackup:true});await tick();assert.equal(f.requests.length,2);assert.equal(f.requests[1].body.provider,'local');
+ f.finish({provider:'local',model:'qwen3.5:2b-q4_K_M',replacement_species:'Synthetic native',request_receipt:{groq_requests:0,local_requests:1,pipeline:'test',action_id:'synthetic'}});await tick();
+ assert.equal(f.editor.hidden,false);assert.equal(f.values().replacement_species,'Synthetic native');
+});
+
+test('failed local backup stops and retry stays local without another Groq request',async()=>{
+ const f=fixture();confirm(f);f.fail({localBackup:true});await tick();f.fail();await tick();
+ assert.equal(f.requests.length,2);assert.equal(f.retry.hidden,false);f.retry.dispatch('click');await tick();
+ assert.equal(f.requests.length,3);assert.equal(f.requests[1].body.provider,'local');assert.equal(f.requests[2].body.provider,'local');
+ f.finish({replacement_species:'Synthetic native'});await tick();
+});
+
+test('a stale Groq failure cannot start local inference after species changes',async()=>{
+ const f=fixture();confirm(f);f.species.value='Imperata cylindrica';f.species.dispatch('input');f.fail({localBackup:true});await tick();
+ assert.equal(f.requests.length,1);assert.equal(f.checkbox.checked,false);
+});
+
+test('manual edits made during Groq generation survive automatic local fallback',async()=>{
+ const f=fixture();confirm(f);f.paragraphs[0].textContent='Preserve this management edit';f.fail({localBackup:true});await tick();
+ assert.equal(f.requests.length,2);f.finish({replacement_species:'Synthetic native'});await tick();
+ assert.equal(f.paragraphs[0].textContent,'Preserve this management edit');
+});
+
+test('loading messages contain no broken UTF-8 character sequences',()=>{
+ assert.equal(/\u00e2\u20ac|\u00c2\u00b7/.test(source),false);
 });

@@ -11,6 +11,7 @@ def reset(monkeypatch):
     ai._user_attempts.clear()
     ai._global_attempts.clear()
     monkeypatch.setenv("GROQ_API_KEY", "synthetic-key")
+    monkeypatch.setattr(ai,"load_references",lambda context:[{"url":"https://www.nparks.gov.sg/florafaunaweb/flora/1/9/1925","title":"Synthetic profile","text":"Grona heterophylla native range includes Malaya. Suitable groundcover."}])
 
 
 def test_confirmation_role_revision_and_no_assignment(roles, monkeypatch):

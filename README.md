@@ -107,10 +107,19 @@ npx eas-cli@latest build --platform android --profile preview
 
 - Put only your Groq API key in `backend/data/groq-api-key.txt` (ignored by Git), or set backend `GROQ_API_KEY`. Never put it in the mobile app.
 - Restart the backend after code updates, then refresh management with Ctrl + F5.
-- Confirm the classified species. Correct identification is available if needed. One Groq request researches and returns removal, a proposed replacement species, replanting and the handover note together. Edit the draft before Save decision.
-- The replacement is a proposal for management approval. Site conditions still need checking. Sources come from the actual browser-tool results, not invented links. If the response is incomplete or unsupported, BioGuard shows an error without making another request.
-- Default model: `openai/gpt-oss-120b`; optional `GROQ_MODEL` must support Groq browser search. There is no automatic model fallback, formatter request or automatic retry.
+- Confirm the classified species. Correct identification is available if needed. BioGuard downloads selected official botanical profiles itself and caches readable pages for six hours. Then one plain Groq request returns removal, a proposed replacement species, replanting and the handover note together. Groq browser tools are disabled. Edit the draft before Save decision.
+- The replacement is a proposal for management approval. Site conditions still need checking. Sources come from the reference pages BioGuard actually retrieved, not invented links. The reference pool covers two herbaceous options and one woody option; these are provisional choices, not an exhaustive search for the best plant. If the response is incomplete or unsupported, BioGuard shows an error without making another request.
+- Default model: `openai/gpt-oss-120b`; optional `GROQ_MODEL` must support strict structured outputs. There is no formatter request or automatic Groq retry. If Groq fails and the local backup is configured, BioGuard automatically tries Qwen once.
 - Same report revision and confirmed species: reuse the draft for 15 minutes with zero extra Groq requests. A new revision or corrected species is a new draft.
 - New attempts: at least 30 seconds apart, maximum 10 per management account per hour and 30 total per hour. Failed attempts count too. Blocked requests use no Groq call. Limits and cache apply to this backend process and reset when it restarts; run one backend worker for this beta.
 - Only confirmed species, rough amount and Malaysia region are sent. No photos, precise coordinates, reporter details or report history are sent.
-- Groq's own token quotas still apply. A request can contain browser-tool work and multiple output sections while remaining one outgoing BioGuard API request. No live Groq requests are needed to run the offline budget tests.
+- Groq's own token quotas still apply. The draft shows a usage receipt with the actual number of outgoing Groq requests and the provider request ID when available. Receipts are also saved in the active beta data folder as `ai-usage.jsonl`; they contain no API keys, photos or report text. The active pipeline is `plain-reference-v3` (`/ai/status`, management login required). No live Groq requests are needed to run the offline budget tests.
+
+### Local Qwen backup (optional)
+
+- Groq stays primary. If it fails and a local model is configured, Qwen automatically prepares all four sections with one local request and **zero extra Groq requests**. No backup button is needed. If Qwen also fails, generation stops; Retry draft retries locally.
+- Install/start Ollama on the same laptop as the backend. Run `ollama list` to find your installed Qwen model name.
+- Put that exact name (for example `qwen3:8b`, only if installed) in `backend/data/ollama-model.txt`, or set `OLLAMA_MODEL` in the terminal before starting BioGuard. Restart the backend and refresh management with Ctrl + F5.
+- Ollama must listen on its normal local address `http://127.0.0.1:11434`. No model is downloaded automatically, and its port does not need to be exposed to friends.
+- The backup uses the same botanical reference checks and editable sections. Internet is still needed for uncached reference pages. Speed and quality depend on the installed model and laptop; management must review the result.
+- Groq and local drafts have separate 15-minute caches and per-account cooldowns, so a Groq quota error does not delay the first local attempt. The shared hourly cap and in-flight protection still apply. Usage receipts record Groq and local request counts separately.

@@ -4,9 +4,9 @@ const statusNames={submitted:'New',needs_info:'More info needed',assigned:'Assig
 const workNames={restoration:'Restoration',inspection:'Inspection',monitoring:'Monitoring',removal:'Removal',replanting:'Replanting',removal_replanting:'Removal & replanting',follow_up:'Follow-up'};
 let currentUser,reports=[],teams=[],notices=[],selectedId,filter='all',loading=false,view='reports',fieldId=0;
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
-async function api(path,options={}){const response=await fetch(path,{credentials:'same-origin',...options,headers:{Accept:'application/json',...options.headers}});if(!response.ok){let message='Could not complete this action.';try{const body=await response.json();message=typeof body.detail==='string'?body.detail:'Check the fields and try again.';}catch{}if(response.status===401)showLogin(true);const failure=new Error(message);failure.status=response.status;throw failure;}return response.status===204?null:response.json();}
+async function api(path,options={}){const response=await fetch(path,{credentials:'same-origin',...options,headers:{Accept:'application/json',...options.headers}});if(!response.ok){let message='Could not complete this action.';try{const body=await response.json();message=typeof body.detail==='string'?body.detail:'Check the fields and try again.';}catch{}if(response.status===401)showLogin(true);const failure=new Error(message);failure.status=response.status;failure.localBackup=response.headers.get('X-BioGuard-Local-Backup')==='available';throw failure;}return response.status===204?null:response.json();}
 const post=(path,body,options={})=>api(path,{...options,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-function showLogin(ended=false){currentUser=undefined;reports=[];teams=[];notices=[];selectedId=undefined;$('#workspace').hidden=true;$('#account').hidden=true;$('#inbox').replaceChildren();$('#detail').replaceChildren();$('#manage-panel').replaceChildren();$('#entry-panel').hidden=false;$('#entry-message').textContent='Opening sign in…';$('#entry-retry').hidden=true;if(window.ReactNativeWebView){if(ended)window.ReactNativeWebView.postMessage('bioguard:session-ended');}else window.location.replace('/');}
+function showLogin(ended=false){currentUser=undefined;reports=[];teams=[];notices=[];selectedId=undefined;$('#workspace').hidden=true;$('#account').hidden=true;$('#inbox').replaceChildren();$('#detail').replaceChildren();$('#manage-panel').replaceChildren();$('#entry-panel').hidden=false;$('#entry-message').textContent='Opening sign in...';$('#entry-retry').hidden=true;if(window.ReactNativeWebView){if(ended)window.ReactNativeWebView.postMessage('bioguard:session-ended');}else window.location.replace('/');}
 function badge(status){return node('span',statusNames[status]||status.replaceAll('_',' '),'badge '+(['submitted','needs_info','blocked','awaiting_verification'].includes(status)?'warning':''));}
 function feedback(message,failed=false){const e=$('#feedback');e.textContent=message;e.className=message?(failed?'error':'success'):'';}
 function field(form,label,name,kind='input',value=''){const wrap=node('label',label);const input=node(kind);input.name=name;input.id=name+'_'+(++fieldId);wrap.htmlFor=input.id;input.value=value??'';wrap.append(input);form.append(wrap);return input;}
@@ -15,7 +15,7 @@ function select(form,label,name,options,value){const input=field(form,label,name
 function text(form,label,name,value='',max=1600){const input=field(form,label,name,'textarea',value);input.maxLength=max;return input;}
 function check(form,label,checked=false){const wrap=node('label',undefined,'check');const input=node('input');input.type='checkbox';input.checked=checked;wrap.append(input,node('span',label));form.append(wrap);return input;}
 function button(label,run,cls='secondary'){const b=node('button',label,cls);b.type='button';b.addEventListener('click',()=>{b.disabled=true;Promise.resolve().then(run).catch(e=>feedback(e.message,true)).finally(()=>{b.disabled=false;});});return b;}
-function fact(label,value){const e=node('div');e.append(node('span',label,'fact-label'),node('span',value??'—'));return e;}
+function fact(label,value){const e=node('div');e.append(node('span',label,'fact-label'),node('span',value??'-'));return e;}
 function photos(container,report,ids,labels={}){const grid=node('div',undefined,'photos work');for(const photo of report.photos.filter(p=>ids.includes(p.id))){const fig=node('figure'),image=node('img');image.src=photo.url;image.alt='Evidence for '+report.reference;image.loading='lazy';fig.append(image,node('figcaption',labels[photo.id]??photo.kind.replaceAll('_',' ')));grid.append(fig);}container.append(grid);}
 async function enter(user){if(!['ground','ecology','management'].includes(user.role))throw new Error('Could not read your account.');if(user.role!=='management'||user.must_change_password){showLogin(true);return;}currentUser=user;$('#entry-panel').hidden=true;$('#workspace').hidden=false;$('#account').hidden=false;$('#account-name').textContent=user.display_name;teams=await api('/teams');showView('reports');await loadReports();await loadNotices();}
 async function loadReports(){if(loading)return;loading=true;$('#refresh').disabled=true;try{reports=await api('/reports');teams=await api('/teams');drawInbox();if(selectedId){const item=reports.find(r=>r.id===selectedId);if(item)drawDetail(item);}}catch(e){feedback(e.message,true);}finally{loading=false;$('#refresh').disabled=false;}}
@@ -35,6 +35,15 @@ function appendResearchLinks(container,sources){
  for(const source of sources){if(typeof source.url!=='string'||!source.url.startsWith('https://'))continue;const row=node('li'),link=node('a',source.title||source.url);link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';row.append(link);list.append(row);}
  container.append(list);
 }
+function formatSteps(value){
+ const text=String(value??'').replaceAll('\\n','\n').trim();
+ const markers=[...text.matchAll(/(?:^|\s)([0-9]{1,2})[.)]\s+/g)];
+ if(markers.length<2||markers[0][1]!=='1')return text;
+ const prefix=text.slice(0,markers[0].index).trim();
+ const steps=markers.map((match,index)=>text.slice(match.index+match[0].length,markers[index+1]?.index??text.length).trim().replace(/\s+/g,' ')).filter(Boolean).map((body,index)=>`${index+1}. ${body}`);
+ return (prefix?prefix+'\n':'')+steps.join('\n');
+}
+function draftText(key,value){return ['removal_instructions','replanting_instructions'].includes(key)?formatSteps(value):String(value??'');}
 function planFields(form,initial={},report=null,reviewNotes=null){
  if(!report||(initial.id&&initial.work_type!=='restoration'))return legacyPlanFields(form,initial);
  form.append(node('h3','Restoration job'),node('p','One job for removal and approved replanting.','compact-note'));
@@ -56,7 +65,8 @@ function planFields(form,initial={},report=null,reviewNotes=null){
   sections[key]=body;editor.append(heading,body);
  }
  const researchPanel=node('div',undefined,'replacement-research');researchPanel.hidden=true;
- const retry=button('Retry draft',()=>generate());retry.hidden=true;panel.append(status,editor,researchPanel,retry);
+ let lastProvider='groq';const retry=button('Retry draft',()=>generate(lastProvider));retry.hidden=true;
+ panel.append(status,editor,researchPanel,retry);
  let researchSources=(initial.research_sources??[]).map(url=>({url,title:url})),lastPlanting='';
  function renderResearch(result){
   researchPanel.replaceChildren();researchPanel.hidden=false;researchSources=result.sources??[];
@@ -68,34 +78,40 @@ function planFields(form,initial={},report=null,reviewNotes=null){
     status.textContent='Replacement selected. Review its site checks and edit the plan before saving.';
    }));appendResearchLinks(card,candidate.sources??[]);researchPanel.append(card);
   }
+  if(result.provider)researchPanel.append(node('p',`Draft provider: ${result.provider==='local'?'Local backup':'Groq'} · ${result.model??''}`,'compact-note'));
+  if(result.request_receipt){const usage=result.request_receipt;researchPanel.append(node('p',`Groq requests this action: ${usage.groq_requests}${usage.cached?' (cached draft)':''}. Local requests: ${usage.local_requests??0}`,'compact-note'));const receipt=node('details');receipt.append(node('summary','Usage receipt'),node('p','Pipeline: '+usage.pipeline,'compact-note'),node('p','Action: '+usage.action_id,'compact-note'));if(usage.provider_request_id)receipt.append(node('p','Provider request: '+usage.provider_request_id,'compact-note'));researchPanel.append(receipt);}
   if(researchSources.length){const details=node('details');details.append(node('summary','Research sources'));appendResearchLinks(details,researchSources);researchPanel.append(details);}
  }
  let version=0,controller=null;
  function show(){approved.parentElement.lastChild.textContent=`I confirm ${species.value||'this plant'} is invasive and approve removal at this site.`;panel.hidden=!approved.checked;if(reviewNotes)reviewNotes.parentElement.hidden=true;}
  function cancel(){version++;if(controller)controller.abort();controller=null;if(approved.checked&&editor.hidden){status.textContent='Draft preparation interrupted. Retry to prepare the plan.';retry.hidden=false;}}
- async function generate(){
-  cancel();if(!approved.checked)return;const confirmed=species.value.trim();show();retry.hidden=true;
+ async function generate(provider='groq',previousSnapshot=null){
+  cancel();if(!approved.checked)return;lastProvider=provider;const confirmed=species.value.trim();show();retry.hidden=true;
   if(confirmed.length<3){status.textContent='Enter the confirmed species first.';retry.hidden=false;return;}
-  const current=version;controller=new AbortController();status.textContent='Researching removal and replacement plants, then preparing your draft…';
-  const snapshot=Object.fromEntries(Object.entries(sections).map(([key,body])=>[key,content(body)]));
+  const current=version;controller=new AbortController();status.textContent=provider==='local'?'Groq is unavailable. Preparing your draft with local Qwen...':'Preparing your restoration draft...';
+  const snapshot=previousSnapshot??Object.fromEntries(Object.entries(sections).map(([key,body])=>[key,content(body)]));
   try{
-   const result=await post(`/reports/${report.id}/restoration-draft`,{revision:report.revision,confirmed_species:confirmed,confirmed_invasive:true},{signal:controller.signal});
+   const result=await post(`/reports/${report.id}/restoration-draft`,{revision:report.revision,confirmed_species:confirmed,confirmed_invasive:true,...(provider==='local'?{provider:'local'}:{})},{signal:controller.signal});
    if(current!==version||!approved.checked||species.value.trim()!==confirmed||form.hidden||form.isConnected===false)return;
-   for(const [key,body] of Object.entries(sections))if(content(body)===snapshot[key])body.textContent=result[key]??'';
+   for(const [key,body] of Object.entries(sections))if(content(body)===snapshot[key])body.textContent=draftText(key,result[key]);
    if(reviewNotes)reviewNotes.value=content(sections.review_notes);
    lastPlanting=content(sections.replanting_instructions);renderResearch(result);
-   editor.hidden=false;status.textContent='Review all four sections, including the proposed replacement. Edit directly before saving.';
-  }catch(error){if(current!==version||error.name==='AbortError')return;status.textContent=error.message;retry.hidden=false;}
+   editor.hidden=false;status.textContent=(provider==='local'?'Local backup draft ready. ':'')+'Review all four sections, including the proposed replacement. Edit directly before saving.';
+  }catch(error){
+   if(current!==version||error.name==='AbortError'||!approved.checked||species.value.trim()!==confirmed||form.hidden||form.isConnected===false)return;
+   if(provider==='groq'&&error.localBackup)return generate('local',snapshot);
+   status.textContent=error.message;retry.hidden=false;
+  }
  }
  approved.addEventListener('change',()=>{cancel();show();if(approved.checked&&editor.hidden)void generate();});
  species.addEventListener('input',()=>{cancel();approved.checked=false;editor.hidden=true;for(const body of Object.values(sections))body.textContent='';researchPanel.hidden=true;researchSources=[];if(reviewNotes)reviewNotes.value='';show();});
  const initialValues={...initial,review_notes:reviewNotes?.value||initial.notes||''};
- if(initial.removal_instructions||initial.replanting_instructions){for(const [key,body] of Object.entries(sections))body.textContent=initialValues[key]??'';editor.hidden=false;status.textContent='Review and edit this restoration plan directly.';lastPlanting=content(sections.replanting_instructions);if(researchSources.length)renderResearch({sources:researchSources,candidates:[],research_notice:'Sources retained from the approved plan.'});}
+ if(initial.removal_instructions||initial.replanting_instructions){for(const [key,body] of Object.entries(sections))body.textContent=draftText(key,initialValues[key]);editor.hidden=false;status.textContent='Review and edit this restoration plan directly.';lastPlanting=content(sections.replanting_instructions);if(researchSources.length)renderResearch({sources:researchSources,candidates:[],research_notice:'Sources retained from the approved plan.'});}
  show();
  const values=()=>{
   if(!approved.checked)throw new Error('Confirm the invasive species first.');
   if(editor.hidden)throw new Error('Wait for the restoration draft, or retry if generation failed.');
-  const plan=Object.fromEntries(Object.entries(sections).map(([key,body])=>[key,content(body).trim()]));
+  const plan=Object.fromEntries(Object.entries(sections).map(([key,body])=>[key,draftText(key,content(body)).trim()]));
   for(const [key,value] of Object.entries(plan)){if(!value)throw new Error('Complete '+labels[key].toLowerCase()+' in the draft.');if(value.length>(key==='replacement_species'?160:1600))throw new Error(labels[key]+' is too long.');}
   return {work_type:'restoration',assigned_team_id:crew.value,due_on:due.value,priority:initial.priority??'normal',confirmed_species:species.value.trim(),confirmed_invasive:true,removal_instructions:plan.removal_instructions,replacement_species:plan.replacement_species,replanting_instructions:plan.replanting_instructions,notes:plan.review_notes,research_sources:researchSources.map(source=>source.url).slice(0,8)};
  };
@@ -117,7 +133,7 @@ function legacyPlanFields(form,initial={},report=null,reviewNotes=null){
 function drawReview(detail,report){
  detail.append(node('hr',undefined,'divider'),node('h3','Next step'));
  const form=node('form',undefined,'review-form');
- const decision=select(form,'Decision','decision',[['assign','Assign restoration job'],['request_info','Request more information'],['no_action','Close — no work needed']]);
+ const decision=select(form,'Decision','decision',[['assign','Assign restoration job'],['request_info','Request more information'],['no_action','Close - no work needed']]);
  const work=node('div',undefined,'work-fields');form.append(work);
  const notes=text(form,'Instructions or review note','review_notes');notes.required=true;
  const values=planFields(work,{},report,notes);notes.required=false;
@@ -130,12 +146,12 @@ function drawWork(detail,report,work){
  if(work.overdue)card.append(node('p','Overdue','overdue'));
  if(work.legacy)card.append(node('p','Earlier work type. Preserve this record; cancel the active case and reopen it to create a new work step.','compact-note'));
  if(work.requires_reassignment)card.append(node('p','This older job needs an explicit reassignment to an ecology team.','error'));
- for(const [label,key] of [['Confirmed species','confirmed_species'],['Approved removal instructions','removal_instructions'],['Approved replacement','replacement_species'],['Replanting instructions','replanting_instructions']])if(work[key])card.append(fact(label,work[key]));
+ for(const [label,key] of [['Confirmed species','confirmed_species'],['Approved removal instructions','removal_instructions'],['Approved replacement','replacement_species'],['Replanting instructions','replanting_instructions']])if(work[key])card.append(fact(label,draftText(key,work[key])));
  if(work.research_sources?.length){const references=node('details');references.append(node('summary','Plan research sources'));appendResearchLinks(references,work.research_sources.map(url=>({url,title:url})));card.append(references);}
  for(const [index,c] of work.completions.entries()){
   const evidence=node('div',undefined,'evidence-record');evidence.append(node('h3',`Evidence ${index+1}`),fact('Visit date',c.observed_on),node('p',c.notes,'note'));
   for(const [label,key] of [['Plant identified by ecology team','suggested_species'],['Recommended next step','recommended_action'],['Suggested removal method','removal_recommendation'],['Suggested replacement','replacement_recommendation'],['Removed on','removed_on']])if(c[key])evidence.append(fact(label,c[key]));
-  if(c.planted_on)evidence.append(fact('Planted',`${c.quantity} × ${c.planted_species} · ${c.planted_on}`));
+  if(c.planted_on)evidence.append(fact('Planted',`${c.quantity} Ã— ${c.planted_species} · ${c.planted_on}`));
   if(c.planting_pending_reason)evidence.append(fact('Replanting pending',c.planting_pending_reason));
   if(c.regrowth)evidence.append(fact('Regrowth',c.regrowth));if(c.checked_count!=null)evidence.append(fact('Plants surviving',`${c.surviving_count} / ${c.checked_count}`));
   evidence.append(node('p',`${c.submitted_by} · ${new Date(c.submitted_at).toLocaleString()}`,'compact-note'));const labels={};if(work.work_type==='restoration')for(const [i,id] of (c.photo_ids??[]).entries())labels[id]=c.stage==='both'?(i===0?'After removal':'After replanting'):c.stage==='removal'?'After removal':'After replanting';photos(evidence,report,c.photo_ids??[],labels);card.append(evidence);
@@ -172,7 +188,7 @@ $('#refresh').addEventListener('click',()=>{void loadReports();void loadNotices(
 $('#filters').addEventListener('click',e=>{const b=e.target.closest('[data-filter]');if(!b)return;filter=b.dataset.filter;for(const item of $('#filters').querySelectorAll('button'))item.setAttribute('aria-pressed',String(item===b));drawInbox();});
 $('#views').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)void showView(b.dataset.view).catch(f=>feedback(f.message,true));});
 setInterval(()=>{void loadNotices();},30000);
-function openWorkspace(){$('#entry-message').textContent='Opening management…';$('#entry-retry').hidden=true;api('/auth/me').then(enter).catch(error=>{if(error.status===401)return;$('#entry-panel').hidden=false;$('#entry-message').textContent=error.message||'Could not open management. Please retry.';$('#entry-retry').hidden=false;});}
+function openWorkspace(){$('#entry-message').textContent='Opening management...';$('#entry-retry').hidden=true;api('/auth/me').then(enter).catch(error=>{if(error.status===401)return;$('#entry-panel').hidden=false;$('#entry-message').textContent=error.message||'Could not open management. Please retry.';$('#entry-retry').hidden=false;});}
 $('#entry-retry').addEventListener('click',openWorkspace);
 $('#entry-signin').addEventListener('click',event=>{event.preventDefault();showLogin(true);});
 openWorkspace();
