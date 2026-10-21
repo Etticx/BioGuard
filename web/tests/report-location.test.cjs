@@ -9,7 +9,8 @@ test('saved point is placed on the same demo map at its exact relative coordinat
  const {context,container}=setup();context.drawLocation(container,{site:'Synthetic Elmina site',landmark:'Lake path',location_mode:'demo_map',demo_pin:{map_id:'elmina-city-centre-v1',x:0.72,y:0.83}});
  const all=flatten(container);const pin=all.find(e=>e.className==='report-location-pin');assert.ok(pin);assert.equal(pin.style.left,'72%');assert.equal(pin.style.top,'83%');
  assert.equal(all.find(e=>e.className==='report-location-image').src,'/officer-assets/elmina-city-centre-demo.png');
- assert.ok(all.some(e=>e.textContent==='Lake path'));assert.ok(all.some(e=>/not GPS/.test(e.textContent)));
+ assert.equal(all.some(e=>e.className==='report-location-info'),false);
+ assert.equal(all.find(e=>e.className==='report-location-layout').children.length,1);
 });
 test('older and invalid locations never receive an invented centre pin',()=>{
  for(const pin of [undefined,{map_id:'other',x:0.5,y:0.5},{map_id:'elmina-city-centre-v1',x:NaN,y:0.5},{map_id:'elmina-city-centre-v1',x:1.5,y:0.5}]){

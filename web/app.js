@@ -33,9 +33,7 @@ function drawLocation(container,report){
  const marker=node('img',undefined,'report-location-pin');marker.src='/officer-assets/location-pin.svg';marker.alt='Plant location selected by the reporter';marker.style.left=(pin.x*100)+'%';marker.style.top=(pin.y*100)+'%';
  image.addEventListener('error',()=>{frame.hidden=true;figure.append(node('p','The location map could not load. Refresh to try again.','compact-note'));});
  frame.append(image,marker);enableLocationGestures(frame,image,marker,pin);figure.append(frame,node('figcaption','Scroll or pinch to zoom. Drag to move. Red pin: reported plant location.','compact-note'));
- const information=node('div',undefined,'report-location-info');
- information.append(node('span','Site','fact-label'),node('p',report.site),node('span','Nearby landmark','fact-label'),node('p',report.landmark),node('p','Demo map position, not GPS coordinates.','compact-note'));
- layout.append(figure,information);section.append(layout);container.append(section);
+ layout.append(figure);section.append(layout);container.append(section);
 }
 function enableLocationGestures(frame,image,marker,pin){
  let zoom=1,x=0,y=0,start=null;const pointers=new Map();
