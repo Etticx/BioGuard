@@ -2,10 +2,9 @@
 import json
 import os
 import threading
-import time
 from pathlib import Path
 from urllib.request import Request as URLRequest, urlopen
-from urllib.error import HTTPError, URLError
+from urllib.error import HTTPError
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from reporting import user_from
@@ -13,7 +12,7 @@ from reporting import user_from
 router = APIRouter()
 _slots = threading.BoundedSemaphore(2)
 _gate = threading.Lock()
-_last = {}
+_last = set()
 
 class DraftRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -40,6 +39,20 @@ No approved replacement list is supplied: return an EMPTY replacement_species; e
 site/approved-list information in replanting_instructions and review_notes. Do not call a guess approved.
 Draft removal and replanting as one job, including disposal that avoids spreading plant material,
 protection of nearby native plants, and recording after-work evidence. Keep each field under 1600 characters.
+You are BioGuard's restoration-draft assistant for Sime Darby Property township ecology teams.
+Produce a practical task brief for the confirmed species and reported extent, not a general essay.
+Name the confirmed species in the removal section and explain its relevant regrowth/spread risks
+only where known. Distinguish herbaceous patches from woody plants; do not assume size or age.
+Put each numbered action on a separate line. Do not invent disposal-facility availability, soil depths,
+spacing, quantities or GPS data. Use the site-approved disposal procedure.
+Removal instructions must include an after-removal photo. Replanting instructions must include an
+after-replanting photo and the actual planting date, species and quantity.
+Use concise numbered actions covering safe preparation, species-appropriate removal considerations,
+containment/disposal, site preparation, approved replacement selection, planting care and evidence.
+Removal and replanting are one restoration job. Ecology records after-removal and after-planting
+photos, planting date, species and quantity. If planting is delayed, record the reason on the same job.
+Management reviews evidence and closes the case. Do not invent a separate mandatory inspection job.
+Keep review_notes to a short handover note, not an approval claim. No greeting, chatbot advice or fake citations.
 Return only the requested JSON. This is a draft for human review, not a removal authorization."""
 
 def api_key():
@@ -59,10 +72,10 @@ def generate(context):
               "properties":{name:{"type":"string"} for name in Draft.model_fields},
               "required":list(Draft.model_fields)}
     body = {"model":model, "messages":[{"role":"system","content":SYSTEM},
-            {"role":"user","content":json.dumps(context)}], "max_completion_tokens":3500,
+            {"role":"user","content":json.dumps(context)}], "max_completion_tokens":3500,"reasoning_effort":"low",
             "response_format":{"type":"json_schema","json_schema":{"name":"restoration_draft","strict":True,"schema":schema}}}
     req = URLRequest("https://api.groq.com/openai/v1/chat/completions", data=json.dumps(body).encode(),
-                     headers={"Authorization":"Bearer "+key,"Content-Type":"application/json"}, method="POST")
+                     headers={"Authorization":"Bearer "+key,"Content-Type":"application/json","User-Agent":"BioGuard/0.2"}, method="POST")
     try:
         with urlopen(req, timeout=35) as response:
             raw = response.read(65537)
@@ -75,8 +88,15 @@ def generate(context):
         return {**draft.model_dump(), "model":model, "draft_only":True,
                 "notice":"AI draft — review all instructions. Select an approved replacement before assigning."}
     except HTTPError as error:
-        status = 429 if error.code==429 else 502
-        raise HTTPException(status, "Groq is busy or unavailable. Retry shortly, or enter instructions manually.") from None
+        messages = {
+            401: "Groq rejected the API key. Check the backend key file.",
+            403: "Groq blocked this request. Check model access and the server connection.",
+            400: "Groq rejected the model configuration. Check GROQ_MODEL and structured-output support.",
+            404: "The configured Groq model is unavailable. Check GROQ_MODEL.",
+            429: "Groq's request or token limit was reached. Wait a moment, then retry."
+        }
+        raise HTTPException(429 if error.code==429 else 502,
+                            messages.get(error.code, "Groq is temporarily unavailable. Please retry.")) from None
     except (OSError, ValueError, KeyError, IndexError, TypeError):
         raise HTTPException(502, "Could not generate a complete draft. Retry, or enter instructions manually.") from None
 
@@ -92,17 +112,19 @@ def restoration_draft(identifier: str, details: DraftRequest, request: Request):
         raise HTTPException(409, "Reopen this case before preparing new instructions.")
     api_key()
     if not _slots.acquire(blocking=False): raise HTTPException(429, "Drafting is busy. Try again shortly.")
+    registered = False
     try:
         with _gate:
-            now = time.monotonic()
             identity = user["id"]
-            if now - _last.get(identity, -100) < 10:
-                raise HTTPException(429, "Wait a few seconds before generating another draft.")
-            if len(_last)>1000: _last.clear()
-            _last[identity] = now
+            if identity in _last:
+                raise HTTPException(429, "Your restoration draft is still being prepared.")
+            _last.add(identity)
+            registered = True
         # Minimal context only: no photos, precise GPS, reporter names, tokens or private history.
         return generate({"confirmed_species":details.confirmed_species,
                          "confirmed_invasive":True, "extent":report.get("extent"),
                          "region":"Malaysia", "approved_replacements":[]})
     finally:
+        if registered:
+            with _gate: _last.discard(identity)
         _slots.release()

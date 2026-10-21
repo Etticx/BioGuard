@@ -107,7 +107,7 @@ npx eas-cli@latest build --platform android --profile preview
 
 - Create `backend/data/groq-api-key.txt` and paste only your Groq API key into it. This file is ignored by Git. Never put the key in the mobile app.
 - Default model: `openai/gpt-oss-120b`. Optional backend environment override: `GROQ_MODEL` (must support strict structured outputs). You can also set `GROQ_API_KEY` instead of using the key file.
-- Start BioGuard as usual. Management opens a report, enters the confirmed species, then ticks the invasive-species confirmation. The instruction fields appear and Groq prepares an editable draft.
+- Start BioGuard as usual. Management opens a report, enters the confirmed species, then ticks the invasive-species confirmation. A single restoration document appears when Groq finishes. Edit the removal, replacement, replanting and handover sections directly; there is no separate generate button.
 - Only confirmed species, rough amount seen and Malaysia region are sent to Groq. Photos, reporter details and precise locations are not sent.
 - Review the draft and select an approved replacement yourself. No approved planting catalogue is connected yet, so AI leaves that field blank. Save decision remains the explicit assignment step.
-- Missing key or API failure: fill the fields manually. No model request or work assignment happens merely by opening a report.
+- Missing key or API failure: read the specific error and use Retry draft after correcting it. No model request or work assignment happens merely by opening a report.

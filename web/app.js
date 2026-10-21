@@ -5,7 +5,7 @@ const workNames={restoration:'Restoration',inspection:'Inspection',monitoring:'M
 let currentUser,reports=[],teams=[],notices=[],selectedId,filter='all',loading=false,view='reports',fieldId=0;
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 async function api(path,options={}){const response=await fetch(path,{credentials:'same-origin',...options,headers:{Accept:'application/json',...options.headers}});if(!response.ok){let message='Could not complete this action.';try{const body=await response.json();message=typeof body.detail==='string'?body.detail:'Check the fields and try again.';}catch{}if(response.status===401)showLogin(true);const failure=new Error(message);failure.status=response.status;throw failure;}return response.status===204?null:response.json();}
-const post=(path,body)=>api(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+const post=(path,body,options={})=>api(path,{...options,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
 function showLogin(ended=false){currentUser=undefined;reports=[];teams=[];notices=[];selectedId=undefined;$('#workspace').hidden=true;$('#account').hidden=true;$('#inbox').replaceChildren();$('#detail').replaceChildren();$('#manage-panel').replaceChildren();$('#entry-panel').hidden=false;$('#entry-message').textContent='Opening sign in…';$('#entry-retry').hidden=true;if(window.ReactNativeWebView){if(ended)window.ReactNativeWebView.postMessage('bioguard:session-ended');}else window.location.replace('/');}
 function badge(status){return node('span',statusNames[status]||status.replaceAll('_',' '),'badge '+(['submitted','needs_info','blocked','awaiting_verification'].includes(status)?'warning':''));}
 function feedback(message,failed=false){const e=$('#feedback');e.textContent=message;e.className=message?(failed?'error':'success'):'';}
@@ -31,6 +31,54 @@ function drawDetail(report){const detail=$('#detail');detail.replaceChildren();c
  const activity=node('details');activity.append(node('summary','Activity'));const list=node('ol',undefined,'history');for(const event of report.history){const li=node('li',event.action.replaceAll('_',' ')+' · '+event.by);li.append(node('time',new Date(event.at).toLocaleString()));if(event.notes)li.append(node('p',event.notes,'note'));list.append(li);}activity.append(list);detail.append(activity);
 }
 function planFields(form,initial={},report=null,reviewNotes=null){
+ if(!report||(initial.id&&initial.work_type!=='restoration'))return legacyPlanFields(form,initial);
+ form.append(node('h3','Restoration job'),node('p','One job for removal and approved replanting.','compact-note'));
+ const crew=select(form,'Assign ecology team','assigned_team_id',[['','Choose ecology team'],...teams.filter(t=>t.members>0).map(t=>[t.id,t.name])],initial.team_id??initial.assigned_team_id);crew.required=true;
+ const due=field(form,'Due date','due_on','input',initial.due_on??'');due.type='date';due.min=today();due.required=true;
+ const species=field(form,'Confirmed species','confirmed_species','input',initial.confirmed_species??'');species.maxLength=160;species.required=true;
+ const approved=check(form,'I confirmed this invasive species and approve removal at this site.',initial.confirmed_invasive===true);approved.required=true;
+ const panel=node('section',undefined,'restoration-draft-panel');panel.hidden=true;form.append(panel);
+ const status=node('p','','compact-note');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+ const editor=node('div',undefined,'restoration-document');editor.hidden=true;
+ const content=body=>body.innerText??body.textContent;
+ const sections={};const labels={removal_instructions:'Removal',replacement_species:'Replacement species',replanting_instructions:'Replanting',review_notes:'Handover note'};
+ for(const [key,label] of Object.entries(labels)){
+  const heading=node('h4',label);const body=node('div','','draft-paragraph');body.contentEditable='plaintext-only';body.setAttribute('role','textbox');body.setAttribute('aria-label',label);body.setAttribute('aria-multiline','true');body.dataset.placeholder=key==='replacement_species'?'Enter the management-approved replacement species':'Edit this section';
+  body.addEventListener('input',()=>{if(reviewNotes&&key==='review_notes')reviewNotes.value=content(body);});
+  sections[key]=body;editor.append(heading,body);
+ }
+ const retry=button('Retry draft',()=>generate());retry.hidden=true;panel.append(status,editor,retry);
+ let version=0,controller=null;
+ function show(){panel.hidden=!approved.checked;if(reviewNotes)reviewNotes.parentElement.hidden=true;}
+ function cancel(){version++;if(controller)controller.abort();controller=null;if(approved.checked&&editor.hidden){status.textContent='Draft preparation interrupted. Retry to prepare the plan.';retry.hidden=false;}}
+ async function generate(){
+  cancel();if(!approved.checked)return;const confirmed=species.value.trim();show();retry.hidden=true;
+  if(confirmed.length<3){status.textContent='Enter the confirmed species first.';retry.hidden=false;return;}
+  const current=version;controller=new AbortController();status.textContent='Preparing restoration draft…';
+  const snapshot=Object.fromEntries(Object.entries(sections).map(([key,body])=>[key,content(body)]));
+  try{
+   const result=await post(`/reports/${report.id}/restoration-draft`,{revision:report.revision,confirmed_species:confirmed,confirmed_invasive:true},{signal:controller.signal});
+   if(current!==version||!approved.checked||species.value.trim()!==confirmed||form.hidden||form.isConnected===false)return;
+   for(const [key,body] of Object.entries(sections))if(content(body)===snapshot[key])body.textContent=result[key]??'';
+   if(reviewNotes)reviewNotes.value=content(sections.review_notes);
+   editor.hidden=false;status.textContent='Review and edit this draft directly. Enter an approved replacement species before saving.';
+  }catch(error){if(current!==version||error.name==='AbortError')return;status.textContent=error.message;retry.hidden=false;}
+ }
+ approved.addEventListener('change',()=>{cancel();show();if(approved.checked&&editor.hidden)void generate();});
+ species.addEventListener('input',()=>{cancel();approved.checked=false;editor.hidden=true;for(const body of Object.values(sections))body.textContent='';if(reviewNotes)reviewNotes.value='';show();});
+ const initialValues={...initial,review_notes:reviewNotes?.value||initial.notes||''};
+ if(initial.removal_instructions||initial.replanting_instructions){for(const [key,body] of Object.entries(sections))body.textContent=initialValues[key]??'';editor.hidden=false;status.textContent='Review and edit this restoration plan directly.';}
+ show();
+ const values=()=>{
+  if(!approved.checked)throw new Error('Confirm the invasive species first.');
+  if(editor.hidden)throw new Error('Wait for the restoration draft, or retry if generation failed.');
+  const plan=Object.fromEntries(Object.entries(sections).map(([key,body])=>[key,content(body).trim()]));
+  for(const [key,value] of Object.entries(plan)){if(!value)throw new Error('Complete '+labels[key].toLowerCase()+' in the draft.');if(value.length>(key==='replacement_species'?160:1600))throw new Error(labels[key]+' is too long.');}
+  return {work_type:'restoration',assigned_team_id:crew.value,due_on:due.value,priority:initial.priority??'normal',confirmed_species:species.value.trim(),confirmed_invasive:true,removal_instructions:plan.removal_instructions,replacement_species:plan.replacement_species,replanting_instructions:plan.replanting_instructions,notes:plan.review_notes};
+ };
+ values.cancel=cancel;return values;
+}
+function legacyPlanFields(form,initial={},report=null,reviewNotes=null){
  const kind={value:initial.id?initial.work_type:'restoration'};form.append(node('h3',kind.value==='restoration'?'Restoration job':workNames[kind.value]),node('p',kind.value==='restoration'?'Remove the invasive plant and replant with the approved replacement.':'Existing assignment · original instructions retained.','compact-note'));
  const crew=select(form,'Assign ecology team','assigned_team_id',[['','Choose ecology team'],...teams.filter(t=>t.members>0).map(t=>[t.id,t.name])],initial.team_id??initial.assigned_team_id);crew.required=true;
  const due=field(form,'Due date','due_on','input',initial.due_on??'');due.type='date';due.min=today();due.required=true;
@@ -39,22 +87,7 @@ function planFields(form,initial={},report=null,reviewNotes=null){
  const removal=text(form,'Approved removal instructions','removal_instructions',initial.removal_instructions);
  const replacement=field(form,'Approved replacement species','replacement_species','input',initial.replacement_species);replacement.maxLength=160;
  const planting=text(form,'Replanting instructions','replanting_instructions',initial.replanting_instructions);
- const assistant=node('div',undefined,'ai-draft');assistant.setAttribute('aria-live','polite');form.insertBefore(assistant,removal.parentElement);
- let generation=0,busy=false;const generated=new Map();
- const message=node('p','Confirm the species to prepare an editable draft.','compact-note');
- const draftButton=button('Draft instructions with AI',()=>draft());assistant.append(draftButton,message);
- async function draft(){
-  if(!report||!approved.checked||busy||!species.value.trim())return;
-  const token=++generation,confirmed=species.value.trim();busy=true;draftButton.disabled=true;message.textContent='Preparing draft…';
-  try{const result=await post(`/reports/${report.id}/restoration-draft`,{revision:report.revision,confirmed_species:confirmed,confirmed_invasive:true});
-   if(token!==generation||!approved.checked||species.value.trim()!==confirmed||form.hidden||form.isConnected===false)return;
-   for(const [input,key] of [[removal,'removal_instructions'],[replacement,'replacement_species'],[planting,'replanting_instructions'],[reviewNotes,'review_notes']])if(input&&!input.value.trim()&&result[key]){input.value=result[key];generated.set(input,input.value);}
-   message.textContent=result.notice+' Existing text was kept.';
-  }catch(error){if(token===generation)message.textContent=error.message;}finally{busy=false;draftButton.disabled=false;}
- }
- approved.addEventListener('change',()=>{generation++;adjust();if(approved.checked)draft();});
- species.addEventListener('input',()=>{generation++;approved.checked=false;for(const [input,value] of generated)if(input.value===value)input.value='';generated.clear();message.textContent='Confirm the changed species before drafting.';adjust();});
- function adjust(){const removes=['restoration','removal'].includes(kind.value),plants=['restoration','replanting'].includes(kind.value);species.parentElement.hidden=!removes;species.required=removes;approved.parentElement.hidden=!removes;approved.required=removes;const visible=!removes||approved.checked;assistant.hidden=!report||!removes||!visible;removal.parentElement.hidden=!removes||!visible;removal.required=removes&&visible;replacement.parentElement.hidden=!plants||!visible;planting.parentElement.hidden=!plants||!visible;replacement.required=planting.required=plants&&visible;if(reviewNotes&&report)reviewNotes.parentElement.hidden=!visible;}
+ function adjust(){const removes=['restoration','removal'].includes(kind.value),plants=['restoration','replanting'].includes(kind.value);species.parentElement.hidden=!removes;species.required=removes;approved.parentElement.hidden=!removes;approved.required=removes;removal.parentElement.hidden=!removes;removal.required=removes;replacement.parentElement.hidden=!plants;planting.parentElement.hidden=!plants;replacement.required=planting.required=plants;}
  adjust();
  return ()=>({work_type:kind.value,assigned_team_id:crew.value,due_on:due.value,priority:initial.priority??'normal',confirmed_species:species.value.trim(),confirmed_invasive:['restoration','removal'].includes(kind.value)?approved.checked:null,removal_instructions:['restoration','removal'].includes(kind.value)?removal.value.trim():'',replacement_species:['restoration','replanting'].includes(kind.value)?replacement.value.trim():'',replanting_instructions:['restoration','replanting'].includes(kind.value)?planting.value.trim():''});
 }
@@ -64,9 +97,9 @@ function drawReview(detail,report){
  const decision=select(form,'Decision','decision',[['assign','Assign restoration job'],['request_info','Request more information'],['no_action','Close — no work needed']]);
  const work=node('div',undefined,'work-fields');form.append(work);
  const notes=text(form,'Instructions or review note','review_notes');notes.required=true;
- const values=planFields(work,{},report,notes);
+ const values=planFields(work,{},report,notes);notes.required=false;
  const err=node('p','','error'),submit=node('button','Save decision','primary');submit.type='submit';form.append(err,submit);
- decision.addEventListener('change',()=>{work.hidden=decision.value!=='assign';notes.parentElement.hidden=decision.value==='assign'&&!work.querySelector('input[type=checkbox]').checked;for(const input of work.querySelectorAll('input,select,textarea'))input.disabled=work.hidden;});
+ decision.addEventListener('change',()=>{values.cancel?.();work.hidden=decision.value!=='assign';notes.parentElement.hidden=decision.value==='assign';notes.required=work.hidden;for(const input of work.querySelectorAll('input,select,textarea'))input.disabled=work.hidden;});
  form.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;try{await post(`/reports/${report.id}/review`,{revision:report.revision,decision:decision.value,notes:notes.value.trim(),...(decision.value==='assign'?values():{})});feedback('Decision saved.');await loadReports();await loadNotices();}catch(f){err.textContent=f.message;submit.disabled=false;}});detail.append(form);
 }
 function drawWork(detail,report,work){
@@ -96,7 +129,7 @@ function drawWork(detail,report,work){
  }
  if(!work.legacy&&['assigned','accepted','in_progress','blocked','correction_requested'].includes(work.status)){
   const revise=node('details');revise.append(node('summary','Change instructions or ecology team'));const form=node('form');const values=planFields(form,work,report),note=text(form,'Reason for change','change_reason');note.required=true;const err=node('p','','error'),submit=node('button','Save changes','secondary');submit.type='submit';form.append(err,submit);
-  form.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;try{await post(`/reports/${report.id}/work/${work.id}/revise`,{revision:work.revision,decision:'assign',notes:note.value.trim(),...values()});feedback('Job updated.');await loadReports();}catch(f){err.textContent=f.message;submit.disabled=false;}});revise.append(form);card.append(revise);
+  form.addEventListener('submit',async e=>{e.preventDefault();submit.disabled=true;try{const plan=values();const handover=plan.notes?plan.notes+'\n\nChange reason: '+note.value.trim():note.value.trim();if(handover.length>1600)throw new Error('Shorten the handover note and change reason to 1600 characters.');await post(`/reports/${report.id}/work/${work.id}/revise`,{revision:work.revision,decision:'assign',...plan,notes:handover});feedback('Job updated.');await loadReports();}catch(f){err.textContent=f.message;submit.disabled=false;}});revise.append(form);card.append(revise);
  }
  const history=node('details');history.append(node('summary','Job history'));for(const event of work.history)history.append(node('p',`${event.action.replaceAll('_',' ')} · ${event.by??'System'}${event.notes?' · '+event.notes:''}`,'compact-note'));card.append(history);
  if(['verified','cancelled'].includes(work.status)){const past=node('details');past.append(node('summary',`${workNames[work.work_type]} · ${work.status} · ${work.due_on??'Earlier job'}`),card);detail.append(past);}else detail.append(card);

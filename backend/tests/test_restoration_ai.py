@@ -32,7 +32,11 @@ def test_confirmation_role_revision_and_no_assignment(roles, monkeypatch):
     assert calls == [{"confirmed_species":"Mimosa pudica", "confirmed_invasive":True,"extent":"few","region":"Malaysia","approved_replacements":[]}]
     after = client.get(f"/reports/{report['id']}", headers=manager).json()
     assert after["revision"] == report["revision"] and after["work_items"] == []
+    assert client.post(path, headers=manager, json=payload).status_code == 200
+    identity = sessions["manager"]["user"]["id"]
+    ai._last.add(identity)
     assert client.post(path, headers=manager, json=payload).status_code == 429
+    assert identity in ai._last
 
 
 def test_groq_schema_private_key_and_unapproved_replacement(monkeypatch):
@@ -46,6 +50,7 @@ def test_groq_schema_private_key_and_unapproved_replacement(monkeypatch):
         captured.update(json.loads(request.data))
         assert request.full_url == "https://api.groq.com/openai/v1/chat/completions"
         assert timeout == 35
+        assert request.get_header("User-agent") == "BioGuard/0.2"
         return Response()
     monkeypatch.setattr(ai, "urlopen", opening)
     result = ai.generate({"confirmed_species":"Mimosa pudica"})
@@ -77,3 +82,21 @@ def test_provider_errors_hide_sensitive_details(monkeypatch, status, expected):
     with pytest.raises(ai.HTTPException) as error: ai.generate({})
     assert error.value.status_code == expected
     assert "synthetic-key" not in error.value.detail
+
+
+def test_edited_draft_is_the_plan_delivered_to_ecology(roles):
+    from test_three_roles import assign
+    client, _, sessions = roles
+    report = sighting(client, sessions, key="edited_draft_report")
+    assigned = assign(client, sessions, report, work_type="restoration",
+                      confirmed_species="Mimosa pudica", confirmed_invasive=True,
+                      removal_instructions="Management-edited removal instructions",
+                      replacement_species="Synthetic approved replacement",
+                      replanting_instructions="Management-edited planting instructions",
+                      notes="Management-edited handover")
+    work = assigned["work_items"][-1]
+    field_report = client.get(f"/reports/{report['id']}", headers=auth(sessions, "fieldalpha")).json()
+    delivered = field_report["work_items"][-1]
+    for key in ("removal_instructions", "replacement_species", "replanting_instructions", "notes"):
+        assert delivered[key] == work[key]
+    assert delivered["notes"] == "Management-edited handover"
