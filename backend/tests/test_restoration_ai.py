@@ -34,7 +34,7 @@ def test_confirmation_role_revision_and_no_assignment(roles, monkeypatch):
     result = client.post(path, headers=manager, json=payload)
     assert result.status_code == 200, result.text
     assert len(calls)==1 and calls[0]["confirmed_species"]=="Mimosa pudica"
-    assert calls[0]["inspection"]["source"]["excerpt"] and calls[0]["inspection"]["variables"]["used_path_nearby"]=="unknown"
+    assert "inspection" not in calls[0]
     after = client.get(f"/reports/{report['id']}", headers=manager).json()
     assert after["revision"] == report["revision"] and after["work_items"] == []
     assert client.post(path, headers=manager, json=payload).status_code == 200

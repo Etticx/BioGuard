@@ -97,14 +97,27 @@ test('loading messages contain no broken UTF-8 character sequences',()=>{
 });
 
 
-test('inspection brief and source arrive in the same request and hide when confirmation is removed',async()=>{
- const f=fixture();confirm(f);assert.equal(f.requests.length,1);
- f.finish({inspection_brief:'Check vegetated edges of any nearby paths.',inspection:{species:'Mimosa pudica',location:{kind:'block',block_ids:['B15']},actions:['Inspect surrounding vegetation.'],variables:{used_path_nearby:'unknown'},source:{title:'Queensland Government',url:'https://www.business.qld.gov.au/example',excerpt:'Spread mainly by seeds clinging to humans and animals.'},limitations:['Not a spread prediction.']}});await tick();
- const all=[];function walk(e){all.push(e);for(const c of e.children)walk(c);}walk(f.form);
- assert.equal(f.requests.length,1);
- assert.equal(all.find(e=>e.className==='inspection-brief').textContent,'Check vegetated edges of any nearby paths.');
- assert.ok(all.some(e=>e.textContent==='Location: B15'));
- assert.ok(all.some(e=>e.tag==='blockquote'&&e.textContent.includes('clinging')));
- const host=all.find(e=>e.className==='inspection-guidance');assert.equal(host.hidden,false);
- f.checkbox.checked=false;f.checkbox.dispatch('change');assert.equal(host.hidden,true);
+test('inspection auto-loads without confirmation, is cached and has no dropdown or textbox',async()=>{
+ const calls=[];const host=new Element('section');
+ const result={inspection_brief:'Inspect surrounding vegetation.',inspection:{species:'Mimosa pudica',location:{kind:'block',block_ids:['B08']},actions:['Inspect vegetation.'],source:{title:'Queensland Government',url:'https://www.business.qld.gov.au/example'}}};
+ const context=vm.createContext({node:(tag,text,cls)=>{const e=new Element(tag);e.textContent=text??'';e.className=cls;return e;},post:async(path,body)=>{calls.push({path,body});return result;},api:()=>{throw new Error('Unexpected fallback');}});
+ vm.runInContext(source.slice(source.indexOf('const inspectionRequests='),source.indexOf('function formatSteps(')),context);
+ const report={id:'synthetic',revision:1,prediction:{predicted_species:'Mimosa pudica'}};
+ await context.loadInspectionGuidance(report,host);await context.loadInspectionGuidance(report,host);
+ assert.equal(calls.length,1);assert.equal(calls[0].path,'/reports/synthetic/inspection-draft');
+ assert.equal(calls[0].body.confirmed_invasive,undefined);
+ assert.equal(host.hidden,false);assert.ok(host.children.some(e=>e.textContent==='Inspect surrounding vegetation.'));
+ assert.equal(host.children.some(e=>e.tag==='details'||e.contentEditable||e.tag==='blockquote'),false);
+ assert.ok(host.children.some(e=>e.className==='inspection-source'));
+});
+
+test('inspection ignores stale responses when species changes',async()=>{
+ const pending=[];const host=new Element('section');
+ const context=vm.createContext({node:(tag,text)=>{const e=new Element(tag);e.textContent=text??'';return e;},post:()=>new Promise(resolve=>pending.push(resolve))});
+ vm.runInContext(source.slice(source.indexOf('const inspectionRequests='),source.indexOf('function formatSteps(')),context);
+ const report={id:'synthetic',revision:1,prediction:{predicted_species:'Mimosa pudica'}};
+ const first=context.loadInspectionGuidance(report,host);const second=context.loadInspectionGuidance(report,host,'Psidium guajava');
+ pending[1]({inspection_brief:'Guava guidance',inspection:{species:'Psidium guajava',location:{block_ids:['B08']}}});await second;
+ pending[0]({inspection_brief:'Old Mimosa guidance',inspection:{species:'Mimosa pudica',location:{block_ids:['B08']}}});await first;
+ assert.ok(host.children.some(e=>e.textContent==='Guava guidance'));assert.equal(host.children.some(e=>e.textContent==='Old Mimosa guidance'),false);
 });

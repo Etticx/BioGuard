@@ -30,14 +30,13 @@ def test_all_four_sections_use_one_provider_request(monkeypatch):
     monkeypatch.setattr(ai,"urlopen",opening)
     result=ai.generate({"confirmed_species":"Cleome rutidosperma","extent":"few"})
     assert len(calls)==1
-    assert result["inspection_brief"] and result["inspection"]["source"]["excerpt"]
-    assert "inspection_brief" in calls[0]["response_format"]["json_schema"]["schema"]["required"]
+    assert "inspection_brief" not in calls[0]["response_format"]["json_schema"]["schema"]["required"]
     assert "tools" not in calls[0] and "tool_choice" not in calls[0]
     assert calls[0]["response_format"]["type"]=="json_schema"
     assert all(result[key] for key in ("removal_instructions","replacement_species","replanting_instructions","review_notes"))
     assert result["replacement_species"]=="Grona heterophylla"
     assert result["request_receipt"]["groq_requests"]==1
-    assert result["request_receipt"]["pipeline"]=="inspection-combined-v4"
+    assert result["request_receipt"]["pipeline"]=="inspection-independent-v5"
 
 
 def test_quota_error_never_triggers_fallback_or_second_request(monkeypatch):

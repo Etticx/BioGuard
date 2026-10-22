@@ -6,7 +6,7 @@ let currentUser,reports=[],teams=[],notices=[],selectedId,filter='all',loading=f
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 async function api(path,options={}){const response=await fetch(path,{credentials:'same-origin',...options,headers:{Accept:'application/json',...options.headers}});if(!response.ok){let message='Could not complete this action.';try{const body=await response.json();message=typeof body.detail==='string'?body.detail:'Check the fields and try again.';}catch{}if(response.status===401)showLogin(true);const failure=new Error(message);failure.status=response.status;failure.localBackup=response.headers.get('X-BioGuard-Local-Backup')==='available';throw failure;}return response.status===204?null:response.json();}
 const post=(path,body,options={})=>api(path,{...options,method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-function showLogin(ended=false){currentUser=undefined;reports=[];teams=[];notices=[];selectedId=undefined;$('#workspace').hidden=true;$('#account').hidden=true;$('#inbox').replaceChildren();$('#detail').replaceChildren();$('#manage-panel').replaceChildren();$('#entry-panel').hidden=false;$('#entry-message').textContent='Opening sign in...';$('#entry-retry').hidden=true;if(window.ReactNativeWebView){if(ended)window.ReactNativeWebView.postMessage('bioguard:session-ended');}else window.location.replace('/');}
+function showLogin(ended=false){inspectionRequests.clear();currentUser=undefined;reports=[];teams=[];notices=[];selectedId=undefined;$('#workspace').hidden=true;$('#account').hidden=true;$('#inbox').replaceChildren();$('#detail').replaceChildren();$('#manage-panel').replaceChildren();$('#entry-panel').hidden=false;$('#entry-message').textContent='Opening sign in...';$('#entry-retry').hidden=true;if(window.ReactNativeWebView){if(ended)window.ReactNativeWebView.postMessage('bioguard:session-ended');}else window.location.replace('/');}
 function badge(status){return node('span',statusNames[status]||status.replaceAll('_',' '),'badge '+(['submitted','needs_info','blocked','awaiting_verification'].includes(status)?'warning':''));}
 function feedback(message,failed=false){const e=$('#feedback');e.textContent=message;e.className=message?(failed?'error':'success'):'';}
 function field(form,label,name,kind='input',value=''){const wrap=node('label',label);const input=node(kind);input.name=name;input.id=name+'_'+(++fieldId);wrap.htmlFor=input.id;input.value=value??'';wrap.append(input);form.append(wrap);return input;}
@@ -81,7 +81,7 @@ function drawDetail(report){const detail=$('#detail');detail.replaceChildren();c
  const suggestion=node('div',undefined,'suggestion');if(report.prediction){const p=report.prediction;suggestion.append(node('span',`${(p.confidence*100).toFixed(1)}%`,'confidence'),node('span','MODEL SUGGESTION','eyebrow'),node('h3',p.common_name),node('p',p.predicted_species,'scientific'),node('p',p.uncertain_identification?'Not confident · review needed':p.sdp_listed_invasive?'Invasive · SDP list':'Not listed as invasive · SDP list','compact-note'));}else if(report.review?.confirmed_species&&report.review.confirmed_invasive===true)suggestion.append(node('span','MANAGEMENT CONFIRMED','eyebrow'),node('h3',report.review.confirmed_species),node('p','Invasive identification confirmed for this site.','compact-note'));else suggestion.append(node('h3','Identification pending'),node('p','Confirm the plant from the photos or request clearer evidence before assigning restoration.','compact-note'));if(report.identification_questioned)suggestion.append(node('p','The reporter questioned this identification.','error'));detail.append(suggestion);
  const facts=node('div',undefined,'facts');facts.append(fact('Reported by',report.reporter_name),fact('Observed',report.observed_on),fact('Amount seen',{one:'One plant',few:'A few plants',patch:'A patch',unsure:'Not sure'}[report.extent]),fact('Submitted',new Date(report.created_at).toLocaleString()));if(report.latitude!=null)facts.append(fact('Coordinates',`${report.latitude}, ${report.longitude}`));detail.append(facts);if(report.notes)detail.append(node('p',report.notes,'note'));
  drawLocation(detail,report);
- const inspectionHost=node("section",undefined,"inspection-guidance");inspectionHost.id="inspection-guidance";inspectionHost.dataset.reportId=report.id;inspectionHost.hidden=true;detail.append(inspectionHost);
+ const inspectionHost=node("section",undefined,"inspection-guidance");inspectionHost.id="inspection-guidance";inspectionHost.dataset.reportId=report.id;detail.append(inspectionHost);void loadInspectionGuidance(report,inspectionHost);
  if(report.review)detail.append(node('hr',undefined,'divider'),node('h3','Management review'),node('p',report.review.notes,'note'),node('p',report.review.reviewer_name,'compact-note'));
  for(const work of [...report.work_items].sort((a,b)=>Number(['verified','cancelled'].includes(a.status))-Number(['verified','cancelled'].includes(b.status))))drawWork(detail,report,work);
  const active=report.work_items.some(w=>!['verified','cancelled'].includes(w.status));if(!active&&!['cancelled','duplicate','completed','closed'].includes(report.status))drawReview(detail,report);
@@ -92,6 +92,28 @@ function appendResearchLinks(container,sources){
  const list=node('ul',undefined,'research-links');
  for(const source of sources){if(typeof source.url!=='string'||!source.url.startsWith('https://'))continue;const row=node('li'),link=node('a',source.title||source.url);link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';row.append(link);list.append(row);}
  container.append(list);
+}
+const inspectionRequests=new Map();
+function renderInspectionCard(host,result,confirmed=false){
+ const guide=result.inspection;host.replaceChildren();host.hidden=false;
+ host.append(node('h3','Inspection guidance'));
+ const place=guide.location?.block_ids?.length?'Block '+guide.location.block_ids.join(' / '):guide.location?.kind==='water'?(guide.location.water_names?.join(' / ')||'Mapped water'):'Reported location';
+ host.append(node('p',guide.species+' · '+place+(confirmed?'':' · Suggested species'),'inspection-meta'));
+ host.append(node('p',result.template_only?guide.actions.join(' '):result.inspection_brief,'inspection-copy'));
+ if(guide.source){const source=node('p',undefined,'inspection-source');source.append(node('span','Source: '));const link=node('a',guide.source.title);link.href=guide.source.url;link.target='_blank';link.rel='noopener noreferrer';source.append(link);host.append(source);}
+ host.append(node('p','Inspection advice, not predicted spread.','inspection-note'));
+}
+async function loadInspectionGuidance(report,host,correction=null){
+ const species=correction??(report.review?.confirmed_species||report.prediction?.predicted_species||'');
+ const key=[report.id,report.revision,species].join('|');host.dataset.inspectionKey=key;host.hidden=false;
+ host.replaceChildren(node('h3','Inspection guidance'),node('p','Preparing inspection guidance...','compact-note'));
+ if(species.trim().length<3){host.replaceChildren(node('h3','Inspection guidance'),node('p','Identify the plant first to receive species-specific inspection guidance.'));return;}
+ if(!inspectionRequests.has(key)){
+  const task=post(`/reports/${report.id}/inspection-draft`,{revision:report.revision,species}).catch(()=>api(`/reports/${report.id}/inspection-guidance?confirmed_species=${encodeURIComponent(species)}`));
+  inspectionRequests.set(key,task);if(inspectionRequests.size>100)inspectionRequests.delete(inspectionRequests.keys().next().value);
+ }
+ try{const result=await inspectionRequests.get(key);if(host.isConnected===false||host.dataset.inspectionKey!==key)return;renderInspectionCard(host,result,report.review?.confirmed_invasive===true&&report.review?.confirmed_species===species);}
+ catch{inspectionRequests.delete(key);if(host.isConnected!==false&&host.dataset.inspectionKey===key)host.replaceChildren(node('h3','Inspection guidance'),node('p','Guidance could not be loaded. Refresh when connected.'));}
 }
 function formatSteps(value){
  const text=String(value??'').replaceAll('\\n','\n').trim();
@@ -112,25 +134,6 @@ function planFields(form,initial={},report=null,reviewNotes=null){
  const correction=button('Correct identification',()=>{species.parentElement.hidden=!species.parentElement.hidden;species.required=!species.value.trim();if(!species.parentElement.hidden)species.focus?.();},'text-button');form.append(correction);
  if(!species.value.trim())species.parentElement.hidden=false;
  const approved=check(form,`I confirm ${species.value||'this plant'} is invasive and approve removal at this site.`,initial.confirmed_invasive===true);approved.required=true;
- const existingInspection=document.getElementById?.('inspection-guidance');
- const inspectionHost=existingInspection?.dataset.reportId===report.id?existingInspection:node('section',undefined,'inspection-guidance');
- if(inspectionHost!==existingInspection)form.append(inspectionHost);
- inspectionHost.hidden=true;
- const inspectionBrief=node('div','','inspection-brief');inspectionBrief.contentEditable='plaintext-only';inspectionBrief.setAttribute('role','textbox');inspectionBrief.setAttribute('aria-label','Inspection brief');inspectionBrief.setAttribute('aria-multiline','true');
- function renderInspection(result){
-  const guide=result.inspection;if(!guide)return;
-  inspectionHost.replaceChildren();inspectionHost.hidden=!approved.checked;
-  inspectionHost.append(node('h3','Inspection guidance'),node('p',guide.species,'scientific'));
-  const area=guide.location?.block_ids?.join(' / ')||(guide.location?.kind==='water'?'Mapped water location':'Reported location — no mapped land block');
-  inspectionHost.append(node('p','Location: '+area,'compact-note'));
-  inspectionBrief.textContent=result.inspection_brief??guide.actions.join('\n');inspectionHost.append(inspectionBrief);
-  const basis=node('details');basis.append(node('summary','Inspection basis and source'));
-  for(const action of guide.actions??[])basis.append(node('p',action));
-  for(const [key,value] of Object.entries(guide.variables??{}))basis.append(node('p',key.replaceAll('_',' ')+': '+value,'compact-note'));
-  if(guide.source){basis.append(node('blockquote',guide.source.excerpt));appendResearchLinks(basis,[guide.source]);}
-  for(const limit of guide.limitations??[])basis.append(node('p',limit,'compact-note'));
-  inspectionHost.append(basis,node('p','Draft only. Review before use; this brief is not saved with the job yet.','compact-note'));
- }
  const panel=node('section',undefined,'restoration-draft-panel');panel.hidden=true;form.append(panel);
  const status=node('p','','compact-note');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
  const editor=node('div',undefined,'restoration-document');editor.hidden=true;
@@ -160,29 +163,30 @@ function planFields(form,initial={},report=null,reviewNotes=null){
   if(researchSources.length){const details=node('details');details.append(node('summary','Research sources'));appendResearchLinks(details,researchSources);researchPanel.append(details);}
  }
  let version=0,controller=null;
- function show(){approved.parentElement.lastChild.textContent=`I confirm ${species.value||'this plant'} is invasive and approve removal at this site.`;panel.hidden=!approved.checked;inspectionHost.hidden=!approved.checked;if(reviewNotes)reviewNotes.parentElement.hidden=true;}
+ function show(){approved.parentElement.lastChild.textContent=`I confirm ${species.value||'this plant'} is invasive and approve removal at this site.`;panel.hidden=!approved.checked;if(reviewNotes)reviewNotes.parentElement.hidden=true;}
  function cancel(){version++;if(controller)controller.abort();controller=null;if(approved.checked&&editor.hidden){status.textContent='Draft preparation interrupted. Retry to prepare the plan.';retry.hidden=false;}}
  async function generate(provider='groq',previousSnapshot=null){
   cancel();if(!approved.checked)return;lastProvider=provider;const confirmed=species.value.trim();show();retry.hidden=true;
   if(confirmed.length<3){status.textContent='Enter the confirmed species first.';retry.hidden=false;return;}
-  const current=version;controller=new AbortController();inspectionHost.hidden=false;inspectionHost.replaceChildren(node('p','Preparing sourced inspection guidance...','compact-note'));status.textContent=provider==='local'?'Groq is unavailable. Preparing your draft with local Qwen...':'Preparing your restoration draft...';
+  const current=version;controller=new AbortController();status.textContent=provider==='local'?'Groq is unavailable. Preparing your draft with local Qwen...':'Preparing your restoration draft...';
   const snapshot=previousSnapshot??Object.fromEntries(Object.entries(sections).map(([key,body])=>[key,content(body)]));
   try{
    const result=await post(`/reports/${report.id}/restoration-draft`,{revision:report.revision,confirmed_species:confirmed,confirmed_invasive:true,...(provider==='local'?{provider:'local'}:{})},{signal:controller.signal});
    if(current!==version||!approved.checked||species.value.trim()!==confirmed||form.hidden||form.isConnected===false)return;
    for(const [key,body] of Object.entries(sections))if(content(body)===snapshot[key])body.textContent=draftText(key,result[key]);
    if(reviewNotes)reviewNotes.value=content(sections.review_notes);
-   lastPlanting=content(sections.replanting_instructions);renderResearch(result);renderInspection(result);
-   editor.hidden=false;status.textContent=(provider==='local'?'Local backup draft ready. ':'')+'Review the inspection guidance and all four restoration sections. Edit directly before saving.';
+   lastPlanting=content(sections.replanting_instructions);renderResearch(result);
+   editor.hidden=false;status.textContent=(provider==='local'?'Local backup draft ready. ':'')+'Review all four restoration sections. Edit directly before saving.';
   }catch(error){
    if(current!==version||error.name==='AbortError'||!approved.checked||species.value.trim()!==confirmed||form.hidden||form.isConnected===false)return;
    if(provider==='groq'&&error.localBackup)return generate('local',snapshot);
    status.textContent=error.message;retry.hidden=false;
-   try{const fallback=await api(`/reports/${report.id}/inspection-guidance?confirmed_species=${encodeURIComponent(confirmed)}`);if(current===version&&approved.checked&&species.value.trim()===confirmed&&form.isConnected!==false){renderInspection(fallback);inspectionHost.append(node('p','Source-based template shown; no extra AI call was made.','compact-note'));}}catch{if(current===version)inspectionHost.replaceChildren(node('p','Inspection guidance unavailable. Retry when connected.','compact-note'));}
+
   }
  }
  approved.addEventListener('change',()=>{cancel();show();if(approved.checked&&editor.hidden)void generate();});
- species.addEventListener('input',()=>{cancel();approved.checked=false;inspectionHost.replaceChildren();inspectionHost.hidden=true;editor.hidden=true;for(const body of Object.values(sections))body.textContent='';researchPanel.hidden=true;researchSources=[];if(reviewNotes)reviewNotes.value='';show();});
+ species.addEventListener('input',()=>{cancel();approved.checked=false;editor.hidden=true;for(const body of Object.values(sections))body.textContent='';researchPanel.hidden=true;researchSources=[];if(reviewNotes)reviewNotes.value='';show();});
+ species.addEventListener('change',()=>{const host=document.getElementById?.('inspection-guidance');if(host&&host.dataset.reportId===report.id)void loadInspectionGuidance(report,host,species.value.trim());});
  const initialValues={...initial,review_notes:reviewNotes?.value||initial.notes||''};
  if(initial.removal_instructions||initial.replanting_instructions){for(const [key,body] of Object.entries(sections))body.textContent=draftText(key,initialValues[key]);editor.hidden=false;status.textContent='Review and edit this restoration plan directly.';lastPlanting=content(sections.replanting_instructions);if(researchSources.length)renderResearch({sources:researchSources,candidates:[],research_notice:'Sources retained from the approved plan.'});}
  show();
