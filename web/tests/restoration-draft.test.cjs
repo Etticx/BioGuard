@@ -95,3 +95,16 @@ test('manual edits made during Groq generation survive automatic local fallback'
 test('loading messages contain no broken UTF-8 character sequences',()=>{
  assert.equal(/\u00e2\u20ac|\u00c2\u00b7/.test(source),false);
 });
+
+
+test('inspection brief and source arrive in the same request and hide when confirmation is removed',async()=>{
+ const f=fixture();confirm(f);assert.equal(f.requests.length,1);
+ f.finish({inspection_brief:'Check vegetated edges of any nearby paths.',inspection:{species:'Mimosa pudica',location:{kind:'block',block_ids:['B15']},actions:['Inspect surrounding vegetation.'],variables:{used_path_nearby:'unknown'},source:{title:'Queensland Government',url:'https://www.business.qld.gov.au/example',excerpt:'Spread mainly by seeds clinging to humans and animals.'},limitations:['Not a spread prediction.']}});await tick();
+ const all=[];function walk(e){all.push(e);for(const c of e.children)walk(c);}walk(f.form);
+ assert.equal(f.requests.length,1);
+ assert.equal(all.find(e=>e.className==='inspection-brief').textContent,'Check vegetated edges of any nearby paths.');
+ assert.ok(all.some(e=>e.textContent==='Location: B15'));
+ assert.ok(all.some(e=>e.tag==='blockquote'&&e.textContent.includes('clinging')));
+ const host=all.find(e=>e.className==='inspection-guidance');assert.equal(host.hidden,false);
+ f.checkbox.checked=false;f.checkbox.dispatch('change');assert.equal(host.hidden,true);
+});

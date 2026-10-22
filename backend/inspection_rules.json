@@ -1,0 +1,117 @@
+{
+  "Mimosa pudica": {
+    "source": {
+      "title": "Queensland Government — Common sensitive plant",
+      "url": "https://www.business.qld.gov.au/industries/farms-fishing-forestry/agriculture/biosecurity/plants/invasive/other/common-sensitive-plant",
+      "excerpt": "Spread mainly by seeds clinging to humans and animals."
+    },
+    "variables": [
+      "used_path_nearby"
+    ],
+    "actions": {
+      "used_path_nearby": {
+        "yes": "Check vegetated edges of the recorded nearby path.",
+        "no": "Inspect vegetation around the reported plant.",
+        "unknown": "Inspect vegetation around the reported plant, including vegetated edges of any nearby paths."
+      }
+    },
+    "limitation": "People and animals can transport seeds; their actual routes are not known.",
+    "status": "proposed_from_evidence_not_field_validated"
+  },
+  "Leucaena leucocephala": {
+    "source": {
+      "title": "Queensland Government — Leucaena",
+      "url": "https://www.business.qld.gov.au/industries/farms-fishing-forestry/agriculture/biosecurity/plants/invasive/other/leucaena",
+      "excerpt": "Each pod contains about 20 flat, glossy brown seeds that scatter when ripe."
+    },
+    "variables": [
+      "ripe_pods_visible"
+    ],
+    "actions": {
+      "ripe_pods_visible": {
+        "yes": "Inspect the ground around the tree for seedlings where ripe or opened pods are recorded.",
+        "no": "Inspect around the reported tree for additional plants; ripe pods were not observed.",
+        "unknown": "Check for ripe or opened pods and inspect the ground around the tree for seedlings."
+      }
+    },
+    "limitation": "This does not establish a dispersal distance.",
+    "status": "proposed_from_evidence_not_field_validated"
+  },
+  "Psidium guajava": {
+    "source": {
+      "title": "Queensland Government — Yellow guava, page 2",
+      "url": "https://www.publications.qld.gov.au/dataset/68f0e6d9-5460-4518-bccb-c28099fd0735/resource/3a0807ea-c6a2-4100-9b24-58e136351d6c/download/yellow-guava.pdf",
+      "excerpt": "Cut stems will re-shoot, and guavas can sucker from their roots."
+    },
+    "variables": [
+      "previous_cutting"
+    ],
+    "actions": {
+      "previous_cutting": {
+        "yes": "Inspect the treated location for reshooting stems and root suckers.",
+        "no": "Inspect around the reported plant for additional plants; previous cutting was not recorded.",
+        "unknown": "Check for signs of previous cutting. Where cut stems or stumps are present, inspect for reshooting stems and root suckers."
+      }
+    },
+    "limitation": "This supports a local regrowth check, not distant block selection.",
+    "status": "proposed_from_evidence_not_field_validated"
+  },
+  "Commelina diffusa": {
+    "source": {
+      "title": "RiceIPM — Commelina diffusa, Biology and ecology",
+      "url": "https://keyserver.lucidcentral.org/key-server/data/08050103-0a0e-4e01-8a03-040d0c020e0a/media/Html/Commelina_diffusa.htm",
+      "excerpt": "Cut stems can rapidly develop into new plants with roots developing from nodes."
+    },
+    "variables": [
+      "previous_cutting"
+    ],
+    "actions": {
+      "previous_cutting": {
+        "yes": "Inspect the affected vegetation patch for remaining stem pieces and rooted nodes.",
+        "no": "Inspect the surrounding creeping stems for rooted nodes.",
+        "unknown": "Inspect surrounding creeping stems for rooted nodes. Where cutting has occurred, check for remaining stem pieces."
+      }
+    },
+    "limitation": "The map does not establish the vegetation patch or soil moisture.",
+    "status": "proposed_from_evidence_not_field_validated"
+  },
+  "Imperata cylindrica": {
+    "source": {
+      "title": "Florida Department of Agriculture — Means of Dispersal",
+      "url": "https://www.fdacs.gov/Agriculture-Industry/Pests-and-Diseases/Plant-Pests-and-Diseases/Noxious-Weeds/Imperata-cylindrica",
+      "excerpt": "Dense colonies form through the growth and fragmentation of rhizomes."
+    },
+    "variables": [],
+    "actions": {
+      "always": "Inspect vegetation around the visible patch for additional shoots."
+    },
+    "limitation": "The underground extent and connections cannot be established from the map.",
+    "status": "proposed_from_evidence_not_field_validated"
+  },
+  "Muntingia calabura": {
+    "source": {
+      "title": "Revista Arvore (2008) — Reproductive ecology, birds and bats",
+      "url": "https://www.scielo.br/j/rarv/a/nk6JktHqRbbzqnK6FLQJ3LB/?lang=en",
+      "excerpt": "both vertebrate groups can efficiently disperse M. calabura seeds in urban reforestation areas"
+    },
+    "variables": [],
+    "actions": {
+      "always": "Look for additional seedlings in surrounding vegetation."
+    },
+    "limitation": "General inspection prompt only. Local bird and bat movements are unknown.",
+    "status": "proposed_from_evidence_not_field_validated"
+  },
+  "Cleome rutidosperma": {
+    "source": {
+      "title": "NParks — Sieruela rutidosperma, Fruit",
+      "url": "https://www.nparks.gov.sg/florafaunaweb/flora/1/8/1816",
+      "excerpt": "Ants help to disperse seeds."
+    },
+    "variables": [],
+    "actions": {
+      "always": "Check surrounding ground for additional plants of the confirmed species."
+    },
+    "limitation": "General inspection prompt only. No ant route, search radius or water pathway is established.",
+    "status": "proposed_from_evidence_not_field_validated"
+  }
+}
