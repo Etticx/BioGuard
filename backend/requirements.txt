@@ -5,3 +5,4 @@ pillow==12.3.0
 fastapi==0.143.1
 uvicorn==0.54.0
 python-multipart==0.0.32
+reportlab==5.1.0

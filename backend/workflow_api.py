@@ -232,3 +232,14 @@ async def record_inspection(identifier:str,work_id:str,request:Request):
 @router.post('/reports/{identifier}/work/{work_id}/inspection/review')
 def review_inspection(identifier:str,work_id:str,details:InspectionReview,request:Request):
     return invoke(request.app.state.records.review_inspection,identifier,work_id,user_from(request,'management'),details.model_dump(mode='json'))
+
+@router.get("/reports/{identifier}/completion.pdf")
+def download_completion(identifier:str,request:Request):
+    from completion_pdf import eligible,render
+    user=user_from(request,"management")
+    store=request.app.state.records
+    report=store.get_report(identifier,user)
+    if not report:raise HTTPException(404,"Record not found.")
+    if not eligible(report):raise HTTPException(409,"Complete and approve restoration and its follow-up inspection before downloading the final report.")
+    content=render(report,lambda photo_id:store.get_photo(identifier,photo_id,user))
+    return Response(content,media_type="application/pdf",headers={"Content-Disposition":f'attachment; filename="BioGuard-{report["reference"]}-completion.pdf"',"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"})

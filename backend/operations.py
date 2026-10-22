@@ -163,6 +163,8 @@ class OperationsMixin:
             own={work["id"] for work in report["work_items"]}
             report["photos"]=[photo for photo in report["photos"] if not photo["work_id"] or photo["work_id"] in own]
             if (report.get("review") or {}).get("assigned_team_id")!=user.get("team_id"):report["review"]=None
+        from completion_pdf import eligible
+        report["completion_pdf_available"]=eligible(report)
         return report
 
     def get_photo(self,report_id,photo_id,user):

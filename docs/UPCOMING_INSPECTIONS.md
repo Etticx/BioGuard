@@ -25,3 +25,7 @@ Submitting an inspection does not close the case or authorise new removal. Manag
 ## Existing cases
 
 This feature applies when restoration is approved using the updated system. It does not silently create inspections for cases approved before the update. Historical photos and locations remain attached to their original reports.
+
+## Completed-case PDF
+
+Management can download a themed PDF from the ticket header after the case is completed and all restoration and linked follow-up work has been accepted. Cancelled cases, cases closed without restoration, and pending inspections do not qualify. The export includes report details, original coordinates and map link, approved plans, inspection findings, management reviews, activity and photo evidence. The download remains private to Management and is generated on demand.
