@@ -13,7 +13,7 @@ WORKDIR /app
 COPY backend/requirements.txt /app/backend/requirements.txt
 RUN python -m pip install --no-cache-dir --upgrade pip==26.2.1 && python -m pip install --no-cache-dir -r /app/backend/requirements.txt
 COPY backend/*.py /app/backend/
-COPY backend/species_catalog.json /app/backend/
+COPY backend/*.json /app/backend/
 COPY bioguard_comparison_winner.zip /app/
 RUN python /app/backend/setup_model.py && useradd --create-home --uid 10001 bioguard && mkdir /data && chown bioguard:bioguard /data
 COPY web/ /app/web/

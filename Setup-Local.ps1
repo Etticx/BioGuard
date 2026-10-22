@@ -1,7 +1,7 @@
 # One-time Windows preparation. Run from the BioGuard folder in PowerShell.
 $ErrorActionPreference='Stop'
 $bioRoot=$PSScriptRoot
-foreach($bioFile in @('backend/requirements.txt','backend/records.py','mobile/package.json','mobile/package-lock.json','mobile/src/app/_layout.tsx','bioguard_comparison_winner.zip')) {
+foreach($bioFile in @('backend/requirements.txt','backend/records.py','backend/inspection_rules.json','web/elmina-inspection-blocks.geojson','web/elmina-map-config.json','mobile/package.json','mobile/package-lock.json','mobile/src/app/_layout.tsx','bioguard_comparison_winner.zip')) {
  if(-not (Test-Path -LiteralPath (Join-Path $bioRoot $bioFile))) { throw "Missing $bioFile. Ask the project owner for the complete BioGuard source/model files before continuing." }
 }
 $bioNodeCommand=Get-Command node -ErrorAction SilentlyContinue
@@ -9,8 +9,10 @@ $bioNpmCommand=Get-Command npm.cmd -ErrorAction SilentlyContinue
 $bioPyCommand=Get-Command py -ErrorAction SilentlyContinue
 if(-not $bioNodeCommand -or -not $bioNpmCommand -or -not $bioPyCommand){throw 'Install Node 24 LTS and Python 3.12 (including the Python launcher), then reopen PowerShell.'}
 $bioVersion=(& $bioNodeCommand.Source --version).TrimStart('v') -as [version]
-if(-not $bioVersion -or $bioVersion.Major -ne 24){throw 'Use Node 24 LTS, then reopen PowerShell.'}
-& $bioPyCommand.Source -3.12 -c 'import sys; print("Python",sys.version.split()[0])'
+if(-not $bioVersion -or $bioVersion.Major -ne 24 -or $bioVersion -lt [version]'24.3.0'){throw 'Use Node 24 LTS, then reopen PowerShell.'}
+$bioNpmCli=Join-Path (Split-Path -Parent $bioNpmCommand.Source) 'node_modules/npm/bin/npm-cli.js'
+if(-not (Test-Path -LiteralPath $bioNpmCli)){throw 'The npm CLI is missing. Reinstall Node 24 LTS with npm, then reopen PowerShell.'}
+& $bioPyCommand.Source -3.12 --version
 if($LASTEXITCODE -ne 0){throw 'Install Python 3.12 with the Python launcher first.'}
 Push-Location -LiteralPath $bioRoot
 try {
@@ -24,7 +26,7 @@ try {
  & $bioPython backend/setup_model.py
  if($LASTEXITCODE -ne 0){throw 'Model preparation failed. Check the supplied winner ZIP.'}
  Push-Location -LiteralPath (Join-Path $bioRoot 'mobile')
- try { & $bioNpmCommand.Source ci; if($LASTEXITCODE -ne 0){throw 'Mobile dependency installation failed.'} } finally { Pop-Location }
+ try { & $bioNodeCommand.Source $bioNpmCli ci; if($LASTEXITCODE -ne 0){throw 'Mobile dependency installation failed.'} } finally { Pop-Location }
  $bioAccounts=@"
 from pathlib import Path
 import secrets,sys

@@ -1,76 +1,159 @@
-# BioGuard - get, run and test
+# BioGuard
 
-**Windows guide.** Only installing the Android APK? Skip to section 4. No source code or laptop setup is needed on the phone.
+BioGuard connects plant identification, map-based reporting, management approval and ecology inspection/restoration work. The prototype supports nine selected plant species. Inspection blocks organise work; they do not predict spread.
 
-## 1. Get BioGuard from GitHub
+## Quick start on another Windows computer
 
-Project: https://github.com/Etticx/BioGuard (ask the owner for access if private).
+Use **Windows 10/11, 64-bit x86**, **Python 3.12**, **Node.js 24 LTS**, and **Git**. Install Python with the Python launcher. Internet is needed to install dependencies, load map tiles and use cloud AI. An Android phone, Android Studio, Docker and a Groq key are **not required** to try the browser app.
 
-**First time, with Git:** install Git, open a terminal in the parent folder where you want BioGuard, then run:
+Official downloads: [Git](https://git-scm.com/downloads), [Python](https://www.python.org/downloads/windows/), [Node.js](https://nodejs.org/en/download).
+
+Open a **PowerShell** terminal. Run the following commands one at a time.
+
+### 1. Download the project — first time only
 
 ```powershell
 git clone https://github.com/Etticx/BioGuard.git
 cd BioGuard
 ```
 
-**Already have a Git clone?** Open a terminal inside that BioGuard folder, then update it:
+If GitHub asks you to sign in, use an account with repository access. Run the remaining commands inside this folder: `dir` should show `Setup-Local.ps1`, `Start-PrivateBeta.ps1`, `backend`, `mobile`, and `bioguard_comparison_winner.zip`.
+
+The trained model archive is included. **No model training, original dataset download or author-specific folder path is needed.** GitHub's Download ZIP also works, but that folder cannot use `git pull`.
+
+### 2. Check the installed tools
 
 ```powershell
-git pull --ff-only
+git --version
+node --version
+py -3.12 --version
 ```
 
-If Git reports conflicting/local changes, ask the team before changing or deleting files.
+Node should report `v24...`; Python should report `Python 3.12...`. Reopen your terminal after installing them. Use the 64-bit x86 Python installer, not ARM Python, for this documented Windows route.
 
-**Without Git:** open the GitHub page -> Code -> Download ZIP -> Extract All. Open the extracted project folder (it may be called `BioGuard-main`). A downloaded ZIP cannot use `git pull`; download a fresh ZIP when updating. Keep your old folder/data until the update works.
-
-**Check the download:** the project folder must contain `Start-PrivateBeta.ps1`, `backend/`, `mobile/package.json`, `mobile/src/` and `bioguard_comparison_winner.zip`. If anything is missing, ask the owner for a complete copy.
-
-## 2. Open a terminal and prepare your computer
-
-Open this project folder in VS Code -> Terminal -> New Terminal, and select **PowerShell**. Or open Windows Terminal/PowerShell directly in the project folder. In Command Prompt, type `powershell` first; the launch commands below use PowerShell.
-
-If your terminal is somewhere else, use `cd` with **your actual extracted/cloned folder path**:
-
-```powershell
-cd "C:\your-folder\BioGuard"
-```
-
-That is an example, not the author's laptop path. Replace it with wherever you saved the project, including `BioGuard-main` if that is its name. You should see `Start-PrivateBeta.ps1` when you run `dir`.
-
-**First-time setup only:** install Node 24 LTS and Python 3.12 (with the Python launcher), reopen your terminal in the project folder, then run:
+### 3. Prepare dependencies and local accounts
 
 ```powershell
 .\Setup-Local.ps1
 ```
 
-This downloads dependencies, prepares the supplied model, and creates missing local test accounts. Existing accounts, passwords and reports are preserved. After pulling updates, run it again if dependencies changed. Internet access is needed for setup.
+This installs the Python and mobile dependencies, extracts the supplied model, and creates missing local demo accounts. It preserves existing accounts, passwords and reports. The first run can take several minutes and download substantial dependencies, including TensorFlow. Wait for the `Ready` message.
 
-If PowerShell blocks scripts, use `Set-ExecutionPolicy -Scope Process Bypass` in that terminal, then retry. This applies only to the current terminal session.
+If PowerShell refuses to run the script, you can invoke just that script with a process-specific policy:
 
-## 3. Run locally: laptop or Expo Go
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Setup-Local.ps1
+```
 
-**Test logins:** `grounds / 123`, `ecology / 123`, `management / 123`. One sign-in opens the correct workspace. These defaults apply to newly created local accounts and the shared APK test server; an existing changed password is preserved.
+This does not change your permanent execution policy. Review the repository scripts before running them; do not bypass organisational IT policy.
 
-**Laptop browser:** in the project folder, run:
+Optional setup check:
+
+```powershell
+.\Check-Setup.ps1
+```
+
+### 4. Start BioGuard
 
 ```powershell
 .\Start-PrivateBeta.ps1 -Mode Web
 ```
 
-Open **http://localhost:8001/**. Keep the terminal open.
+The script builds the browser app and starts its backend. Keep the terminal open. Once startup finishes, open:
 
-**Expo Go on Android or iPhone:** stop Web mode with Ctrl+C, then run:
+**http://localhost:8001/**
+
+New local demo accounts:
+
+| Username | Password | Workspace |
+| --- | --- | --- |
+| `grounds` | `123` | Identify and report plants |
+| `management` | `123` | Review reports, instructions and work |
+| `ecology` | `123` | Inspect assigned locations and submit evidence |
+
+These passwords are for local/private testing. An existing password is not reset by setup. Do not expose this demo server or these accounts to the public Internet.
+
+Stop the server with **Ctrl+C** in its terminal.
+
+### 5. Confirm it works
+
+Open **http://localhost:8001/health**. Successful model startup reports:
+
+```json
+{
+  "status": "ready",
+  "identification_available": true,
+  "supported_species_count": 9
+}
+```
+
+The response contains additional fields. `status: ready` alone does not prove the model loaded: check `identification_available` too. Then sign in as Grounds, identify a plant photo, pin its location and submit a demo report. Management and Ecology use the same server/database.
+
+## Get updates — when you already have the project
+
+Stop BioGuard with Ctrl+C, open PowerShell **inside your existing BioGuard folder**, then run:
+
+```powershell
+git status
+git switch main
+git pull --ff-only origin main
+.\Setup-Local.ps1
+.\Start-PrivateBeta.ps1 -Mode Web
+```
+
+`clone` downloads the project the first time; `pull` updates an existing Git copy. Setup is safe to rerun after an update and preserves existing records. Start rebuilds the browser app so current code appears. Refresh the browser with **Ctrl+F5**.
+
+If `git status` shows your own changes, or `switch`/`pull` fails, **stop and resolve that with the team**. Do not use `reset --hard`, delete your folder, or overwrite your work just to update.
+
+Only committed and pushed work is available to other computers. Changes sitting on someone else's laptop are not downloaded by `git pull`.
+
+## Optional AI setup
+
+The app and trained plant classifier run without a Groq account. **Automatic removal/replanting drafting requires configured AI.** Management can enter instructions manually without it. Inspection guidance can use a source-based template if model generation is unavailable.
+
+### Groq — primary drafting provider
+
+On the backend computer, create this file in a text editor:
+
+```text
+backend/data/groq-api-key.txt
+```
+
+Put **only your Groq API key** in it. This folder is ignored by Git. Restart BioGuard afterward. Never place keys in screenshots, the README, Expo public environment variables or GitHub.
+
+Alternatively, set `GROQ_API_KEY` in the PowerShell session that starts BioGuard. Default model: `openai/gpt-oss-120b`; optional `GROQ_MODEL` must support the required structured output.
+
+### Local Qwen through Ollama — optional backup
+
+Install Ollama separately on the **backend computer** and install a suitable Qwen model. Run:
+
+```powershell
+ollama list
+```
+
+Create `backend/data/ollama-model.txt` containing the exact installed model name from that list, then restart BioGuard. Alternatively set `OLLAMA_MODEL` in the launch session. Ollama must be reachable at `http://127.0.0.1:11434`.
+
+**A folder containing model files is not enough.** This backup calls Ollama; it does not automatically load another computer's Qwen folder or install/download a model. Hardware, memory requirements and speed depend on the model you choose. You can skip this entirely for the basic demo.
+
+Groq stays primary. Each drafting task makes at most one Groq attempt and, when configured, one local backup attempt. Inspection and restoration are **separate tasks**, so opening an inspection report and later generating a restoration plan can make two requests total. Cached unchanged drafts make no new request. All instructions require review.
+
+## Try it on a phone
+
+### Simplest: phone browser
+
+Keep Web mode running. Put the phone and laptop on the same private Wi-Fi and open the **Phone browser** address printed in the terminal, for example `http://192.168.1.20:8001/`.
+
+`localhost` on a phone means the phone itself, not your laptop. Map tiles need Internet access. Use a photo from the gallery if camera capture is unavailable over local HTTP. If Windows asks for firewall access, use a trusted private network; do not disable the firewall or expose the port publicly.
+
+### Expo Go
+
+Stop Web mode, then run:
 
 ```powershell
 .\Start-PrivateBeta.ps1 -Mode Expo
 ```
 
-1. Put the phone and laptop on the same Wi-Fi.
-2. Open Expo Go compatible with this project's **SDK 57**, and sign in with the same Expo account as the laptop.
-3. Scan the QR shown in the terminal: Android uses Expo Go; iPhone uses its Camera app.
-4. Sign into BioGuard with a test login above.
-
-If Expo needs login, run these commands in a second terminal in the project folder:
+Use an Expo Go version compatible with **SDK 57**, keep both devices on the same private Wi-Fi, and scan the terminal's QR code. Expo uses port 8383 by default; the backend uses 8001. Follow any Expo account/sign-in requirements shown by your installed Expo Go version. To sign in from the project:
 
 ```powershell
 cd mobile
@@ -78,65 +161,57 @@ npx expo login --browser
 cd ..
 ```
 
-Laptop dashboard remains **http://localhost:8001/**. Expo uses port **8383**. Use one local mode at a time. If port 8001 is busy, open the already-running app or stop its original terminal first.
+### Existing Android APK
 
-## 4. Android APK: install and test remotely
+An installed APK has a backend address embedded at build time. **Cloning BioGuard onto a new laptop does not redirect an old APK to that laptop.** Use the browser/Expo route first. A standalone APK needs a reachable HTTPS backend and a new build configured for it. See [advanced running notes](docs/RUNNING_AND_AI.md).
 
-[Download BioGuard APK - version 0.2.0, about 101 MB](https://expo.dev/artifacts/eas/cNrNpTOvPanmRZcf_D7iuAk7_yYXG5t2Xn4IsAQCIZc.apk)
+## Where records and settings live
 
-Download -> open APK -> allow installation from that browser if asked -> install -> sign in. **No Expo Go or GitHub download is needed for this route.** Use the test logins above.
+- Local demo accounts, reports and photos: `backend/data/private-beta/`.
+- Groq key: `backend/data/groq-api-key.txt` (optional, private).
+- Ollama model name: `backend/data/ollama-model.txt` (optional, private).
+- Installed model: `backend/model/`, extracted from the tracked ZIP.
+- Browser build: `mobile/.beta-dist/`, regenerated at startup.
+- Inspection rules: `backend/inspection_rules.json`.
+- Inspection map boundaries: `web/elmina-inspection-blocks.geojson`.
 
-The current APK connects to the project owner's laptop server. The owner must keep that laptop awake, online and the remote beta running. Cloning the project onto another laptop does not move the existing APK's server.
+GitHub does **not** transfer accounts, private reports, keys, installed dependencies or the local Ollama model. Each new setup starts with its own local demo data. To transfer real records, stop the original server and handle a separate private backup/restore with the owner. Do not commit the database to GitHub.
 
-**Project owner only:** start `./Start-RemoteBeta.ps1` if it is not already running. This requires the prepared model/web export and Cloudflare utility. Stop with Ctrl+C in its terminal or `./Stop-RemoteBeta.ps1`.
+## Common problems
 
-**A tunnel restart changes its URL.** The existing APK then needs rebuilding: update `build.preview.env.EXPO_PUBLIC_API_URL` in `mobile/eas.json`, then run from `mobile/`:
+- **Missing model ZIP or folders:** check you downloaded the full repository. The ZIP must be `bioguard_comparison_winner.zip` in the project root; a Git LFS pointer is not a usable model ZIP.
+- **Node version rejected:** install Node 24 LTS, reopen PowerShell and check `node --version`. Do not copy `node_modules` from another computer.
+- **Python not found:** install Python 3.12 with its launcher; check `py -3.12 --version`.
+- **Copied Python environment does not run:** virtual environments are machine-specific. Use a fresh clone and rerun setup; do not share `backend/.venv` between machines.
+- **Dependency installation fails:** read the first error; check Internet/proxy access, supported Python/Windows architecture and free disk space. Do not silently skip failed installation steps.
+- **Port 8001 is in use:** stop the original server or choose another port: `.\Start-PrivateBeta.ps1 -Mode Web -ApiPort 8002`, then open `http://localhost:8002/`.
+- **Page does not load:** keep the server terminal open and wait for startup; inspect the error in that terminal.
+- **App loads but identification is unavailable:** check `/health`, rerun setup, and inspect the backend startup error. Do not claim successful model setup from the login page alone.
+- **Phone cannot connect:** check the current printed LAN address, same Wi-Fi, guest-network isolation and private-network firewall permission. VPNs can select the wrong network adapter.
+- **AI unavailable/rate-limited:** check your own configuration and provider quota. The plant classifier is separate from Groq. Manual instructions remain available.
+- **Old screen after an update:** stop/restart the launcher and refresh with Ctrl+F5. Expo Go needs a reload; an installed APK needs rebuilding.
+
+## Developer checks
+
+From the project root after setup:
 
 ```powershell
-npx eas-cli@latest build --platform android --profile preview
+.\backend\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
+cd backend
+.\.venv\Scripts\python.exe -m pytest -q
+cd ..
+node --test web/tests/*.test.cjs
+cd mobile
+npm test
+npm run typecheck
+npm run lint
+cd ..
 ```
 
-## Keep in mind
+Tests use synthetic fixtures. They do not replace a field trial, a physical phone test or an independently verified ecological assessment.
 
-- Local browser + Expo share local reports; the shared APK has a separate remote-beta database.
-- Keep `backend/data/` when updating: it contains saved reports and photos. GitHub does not include private data or installed dependencies.
-- The owner's active remote URL is in `backend/data/remote-beta/active-url.txt`.
-- Team introduction: `output/pdf/BioGuard_Team_Introduction.pdf`.
+## Other operating systems and hosting
 
-## AI restoration drafts (testing/aiagent)
+The quick-start scripts above are **Windows PowerShell scripts**. Do not paste them into a macOS/Linux shell. The repository also includes Docker and HTTPS deployment configuration for a separate hosting workflow; these require additional account, storage and security configuration. Local browser success is not proof that a public deployment or an existing APK works.
 
-- Put only your Groq API key in `backend/data/groq-api-key.txt` (ignored by Git), or set backend `GROQ_API_KEY`. Never put it in the mobile app.
-- Restart the backend after code updates, then refresh management with Ctrl + F5.
-- Confirm the classified species. Correct identification is available if needed. BioGuard downloads selected official botanical profiles itself and caches readable pages for six hours. Then one plain Groq request returns removal, a proposed replacement species, replanting and the handover note together. Groq browser tools are disabled. Edit the draft before Save decision.
-- The replacement is a proposal for management approval. Site conditions still need checking. Sources come from the reference pages BioGuard actually retrieved, not invented links. The reference pool covers two herbaceous options and one woody option; these are provisional choices, not an exhaustive search for the best plant. If the response is incomplete or unsupported, BioGuard shows an error without making another request.
-- Default model: `openai/gpt-oss-120b`; optional `GROQ_MODEL` must support strict structured outputs. There is no formatter request or automatic Groq retry. If Groq fails and the local backup is configured, BioGuard automatically tries Qwen once.
-- Same report revision and confirmed species: reuse the draft for 15 minutes with zero extra Groq requests. A new revision or corrected species is a new draft.
-- New attempts: at least 30 seconds apart, maximum 10 per management account per hour and 30 total per hour. Failed attempts count too. Blocked requests use no Groq call. Limits and cache apply to this backend process and reset when it restarts; run one backend worker for this beta.
-- Only confirmed species, rough amount and Malaysia region are sent. No photos, precise coordinates, reporter details or report history are sent.
-- Groq's own token quotas still apply. The draft shows a usage receipt with the actual number of outgoing Groq requests and the provider request ID when available. Receipts are also saved in the active beta data folder as `ai-usage.jsonl`; they contain no API keys, photos or report text. The active pipeline is `plain-reference-v3` (`/ai/status`, management login required). No live Groq requests are needed to run the offline budget tests.
-
-### Local Qwen backup (optional)
-
-- Groq stays primary. If it fails and a local model is configured, Qwen automatically prepares all four sections with one local request and **zero extra Groq requests**. No backup button is needed. If Qwen also fails, generation stops; Retry draft retries locally.
-- Install/start Ollama on the same laptop as the backend. Run `ollama list` to find your installed Qwen model name.
-- Put that exact name (for example `qwen3:8b`, only if installed) in `backend/data/ollama-model.txt`, or set `OLLAMA_MODEL` in the terminal before starting BioGuard. Restart the backend and refresh management with Ctrl + F5.
-- Ollama must listen on its normal local address `http://127.0.0.1:11434`. No model is downloaded automatically, and its port does not need to be exposed to friends.
-- The backup uses the same botanical reference checks and editable sections. Internet is still needed for uncached reference pages. Speed and quality depend on the installed model and laptop; management must review the result.
-- Groq and local drafts have separate 15-minute caches and per-account cooldowns, so a Groq quota error does not delay the first local attempt. The shared hourly cap and in-flight protection still apply. Usage receipts record Groq and local request counts separately.
-
-## Elmina live map
-
-- New reports require **Pin plant location** on the OpenStreetMap map near Elmina Lakeside Mall. Drag the map beneath the red pin, scroll/pinch to zoom, then tap **Done**. No device GPS permission is requested.
-- The approximate pilot rectangle is 3.17790–3.18343 latitude and 101.50485–101.51333 longitude. Centre: 3.180661, 101.509091. It is a prototype boundary, not a surveyed SDP property boundary.
-- Reports save real latitude/longitude with map version `elmina-lakeside-v1`. The server rejects new live-map reports outside the boundary. Management shows the same map and saved point.
-- Internet and a reachable backend are required. Map tiles load directly from OpenStreetMap with visible attribution and normal browser caching; no offline tile downloads or background prefetch are provided. Leaflet 1.9.4 is bundled locally under `web/vendor/leaflet/` with its licence.
-- Older image-map reports remain readable on their original illustration. An old draft must be pinned again before sending from the updated app; no coordinates are guessed from the picture.
-- Restart `./Start-PrivateBeta.ps1 -Mode Web` after this update, then refresh the browser. The browser export has also been rebuilt. Expo Go users reload the project after restarting its backend; installed APKs need a new build.
-- The shared map route is `/maps/elmina`; other application pages retain their existing frame restrictions. No spread prediction or automatic identification of drains is included.
-
-Management location maps now highlight the report's prototype inspection block (B01–B20). A shared boundary shows both IDs; mapped water shows its name instead of selecting a land block. Orange shading identifies the location block, not predicted spread or confirmed infestation. Block data comes from `web/elmina-inspection-blocks.geojson`; it uses OSM features with merged fragments and artificial subdivisions, not official SDP boundaries. Grounds pinning and AI generation are unchanged. Refresh the management page to load the overlay; no Expo rebuild is required for these backend-served map assets.
-
-
-Inspection guidance automatically loads below the management map when a report opens. It uses a separate single Groq attempt, cached per report revision/species, with one local-Qwen backup attempt and a source-based template if needed. The card shows a short paragraph and source link without dropdowns. Before review, species is labelled as suggested. Removal/replanting generation remains behind management confirmation and makes its own single Groq attempt; confirming does not regenerate inspection. Rules live in `backend/inspection_rules.json`. Management can edit the guidance and save it with the job; the approved species, block, point and source are retained. Ecology sees the approved map and brief and can submit found/none/unable results. Additional findings require a photo and pin, remain linked to the original job, and need management review before any separate removal approval. Restart the backend and refresh management after updating.
-
-Inspection results: accept the job, record the inspection, and submit its result before restoration evidence. Management reviews inspection results before closing the job. Saving, opening and reviewing a saved inspection does not call AI. Up to five additional plant photo/pin findings can be submitted per inspection; a later inspection can be recorded separately. Inspection submissions currently send online; keep the form open to retry a failed submission. Existing restoration evidence drafts/outbox remain unchanged. The browser export has been rebuilt; Expo Go needs a reload and an existing APK needs rebuilding for the new ecology screen.
+See [running and feature notes](docs/RUNNING_AND_AI.md) for mapping, inspection, AI budgets and APK details. This is a private prototype; no public deployment is performed by local setup.
