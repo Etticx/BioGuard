@@ -2,7 +2,7 @@ import config from './elmina-map-config.json';
 export const ELMINA_MAP_ID='elmina-lakeside-v1' as const;
 export type GeoPoint={latitude:number;longitude:number};
 export type ElminaMessage={type:'bioguard:map-ready'|'bioguard:map-point';map_id:typeof ELMINA_MAP_ID}&GeoPoint;
-export type ElminaMapProps={initial?:GeoPoint|null;onPoint:(point:GeoPoint)=>void;onReady:()=>void;onError:(message:string)=>void};
+export type ElminaMapProps={mode?:'picker'|'view';initial?:GeoPoint|null;onPoint:(point:GeoPoint)=>void;onReady:()=>void;onError:(message:string)=>void};
 export function isElminaPoint(value:unknown):value is GeoPoint{
  if(!value||typeof value!=='object')return false;const p=value as GeoPoint;const [southWest,northEast]=config.bounds;
  return Number.isFinite(p.latitude)&&Number.isFinite(p.longitude)&&p.latitude>=southWest[0]&&p.latitude<=northEast[0]&&p.longitude>=southWest[1]&&p.longitude<=northEast[1];

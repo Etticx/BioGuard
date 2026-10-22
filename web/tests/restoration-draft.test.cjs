@@ -22,7 +22,7 @@ function fixture(){
  const values=context.planFields(form,{}, {id:'synthetic',revision:1,prediction:{predicted_species:'Mimosa pudica'}},notes);
  const all=[];function walk(e){all.push(e);for(const c of e.children)walk(c);}walk(form);
  const paragraphs=all.filter(e=>e.className==='draft-paragraph');
- return {requests,form,notes,all,values,paragraphs,fail:(extra={})=>reject(Object.assign(new Error('Provider rejected key'),extra)),finish:(extra={})=>complete({removal_instructions:'Draft removal',replacement_species:'',replanting_instructions:'Draft planting',review_notes:'Draft note',notice:'Review draft',...extra}),
+ return {context,requests,form,notes,all,values,paragraphs,fail:(extra={})=>reject(Object.assign(new Error('Provider rejected key'),extra)),finish:(extra={})=>complete({removal_instructions:'Draft removal',replacement_species:'',replanting_instructions:'Draft planting',review_notes:'Draft note',notice:'Review draft',...extra}),
  species:all.find(e=>e.name==='species_correction'),checkbox:all.find(e=>e.type==='checkbox'),editor:all.find(e=>e.className==='restoration-document'),panel:all.find(e=>e.className==='restoration-draft-panel'),retry:all.find(e=>e.textContent==='Retry draft')};
 }
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
@@ -120,4 +120,23 @@ test('inspection ignores stale responses when species changes',async()=>{
  pending[1]({inspection_brief:'Guava guidance',inspection:{species:'Psidium guajava',location:{block_ids:['B08']}}});await second;
  pending[0]({inspection_brief:'Old Mimosa guidance',inspection:{species:'Mimosa pudica',location:{block_ids:['B08']}}});await first;
  assert.ok(host.children.some(e=>e.textContent==='Guava guidance'));assert.equal(host.children.some(e=>e.textContent==='Old Mimosa guidance'),false);
+});
+
+
+test('management-edited inspection wording is included in the saved plan',async()=>{
+ const f=fixture();confirm(f);f.finish({replacement_species:'Approved native'});await tick();
+ const host=new Element('section');host.dataset.reportId='synthetic';host.inspectionDraft={requestedSpecies:'Mimosa pudica',brief:'Edited inspection instructions.'};
+ f.context.document.getElementById=()=>host;
+ assert.equal(f.values().inspection_brief,'Edited inspection instructions.');
+ host.inspectionDraft.requestedSpecies='Psidium guajava';assert.throws(()=>f.values(),/current species/);
+});
+
+test('saved inspection is reused without a fresh AI request and can be edited',async()=>{
+ const host=new Element('section');const context=vm.createContext({node:(tag,text,cls)=>{const e=new Element(tag);e.textContent=text??'';e.className=cls;return e;},post:()=>{throw new Error('Must not call AI');}});
+ vm.runInContext(source.slice(source.indexOf('const inspectionRequests='),source.indexOf('function formatSteps(')),context);
+ const saved={species:'Mimosa pudica',brief:'Approved wording.',location:{block_ids:['B08']},source:{url:'https://www.business.qld.gov.au/example',title:'Source'}};
+ await context.loadInspectionGuidance({id:'saved',revision:2,review:{confirmed_species:'Mimosa pudica'},work_items:[{inspection:saved}]},host);
+ const edit=host.children.find(e=>e.textContent==='Edit guidance');edit.dispatch('click');
+ const copy=host.children.find(e=>e.className==='inspection-copy');copy.textContent='Changed wording.';copy.dispatch('input');
+ assert.equal(host.inspectionDraft.brief,'Changed wording.');
 });

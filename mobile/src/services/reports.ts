@@ -69,3 +69,9 @@ export async function submitCompletion(session:Session,reportId:string,workId:st
  const body=new FormData();body.append('details',JSON.stringify(details));body.append('photo',await photo(uri),'evidence.jpg');if(overview)body.append('overview',await photo(overview),'overview.jpg');
  return parseReport(await (await request(`/reports/${reportId}/work/${workId}/complete`,session,{method:'POST',body})).json());
 }
+
+export async function submitInspection(session:Session,work:WorkItem,details:import('./reportContract').InspectionSubmission,uris:string[]){
+ const body=new FormData();body.append('details',JSON.stringify(details));
+ for(const [index,uri] of uris.entries())body.append('photo_'+index,await photo(uri),'finding-'+index+'.jpg');
+ return parseReport(await (await request(`/reports/${work.report_id}/work/${work.id}/inspection`,session,{method:'POST',body})).json());
+}

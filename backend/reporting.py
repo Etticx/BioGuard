@@ -84,6 +84,7 @@ class Review(BaseModel):
     replacement_species: str = Field(default="", max_length=160)
     replanting_instructions: str = Field(default="", max_length=1600)
     research_sources: list[HttpUrl] = Field(default_factory=list, max_length=8)
+    inspection_brief: str = Field(default="", max_length=1600)
 
     @model_validator(mode="after")
     def assignment_needs_approval(self):

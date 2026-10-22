@@ -209,5 +209,8 @@ class BaseRecords:
 from operations import OperationsMixin
 
 
-class Records(OperationsMixin, BaseRecords):
+from inspection_results import InspectionResultsMixin
+
+
+class Records(InspectionResultsMixin, OperationsMixin, BaseRecords):
     """Versioned reports, work visits, staff accounts and restoration evidence."""

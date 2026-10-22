@@ -99,20 +99,25 @@ function renderInspectionCard(host,result,confirmed=false){
  host.append(node('h3','Inspection guidance'));
  const place=guide.location?.block_ids?.length?'Block '+guide.location.block_ids.join(' / '):guide.location?.kind==='water'?(guide.location.water_names?.join(' / ')||'Mapped water'):'Reported location';
  host.append(node('p',guide.species+' · '+place+(confirmed?'':' · Suggested species'),'inspection-meta'));
- host.append(node('p',result.template_only?guide.actions.join(' '):result.inspection_brief,'inspection-copy'));
+ const copy=node('p',result.template_only?guide.actions.join(' '):result.inspection_brief,'inspection-copy');
+ host.inspectionDraft={species:guide.species,requestedSpecies:guide.species,brief:copy.textContent};host.inspectionLoading=false;
+ const edit=node('button','Edit guidance','text-button');edit.type='button';edit.addEventListener('click',()=>{copy.contentEditable='plaintext-only';copy.setAttribute('role','textbox');copy.setAttribute('aria-label','Approved inspection guidance');copy.focus?.();edit.hidden=true;host.append(node('p','Save the job decision or job changes to apply your edits.','inspection-note'));});
+ copy.addEventListener('input',()=>{host.inspectionDraft.brief=(copy.innerText??copy.textContent).trim();});host.append(copy,edit);
  if(guide.source){const source=node('p',undefined,'inspection-source');source.append(node('span','Source: '));const link=node('a',guide.source.title);link.href=guide.source.url;link.target='_blank';link.rel='noopener noreferrer';source.append(link);host.append(source);}
  host.append(node('p','Inspection advice, not predicted spread.','inspection-note'));
 }
 async function loadInspectionGuidance(report,host,correction=null){
  const species=correction??(report.review?.confirmed_species||report.prediction?.predicted_species||'');
- const key=[report.id,report.revision,species].join('|');host.dataset.inspectionKey=key;host.hidden=false;
+ const key=[report.id,report.revision,species].join('|');host.dataset.inspectionKey=key;host.hidden=false;host.inspectionDraft=null;host.inspectionLoading=true;
  host.replaceChildren(node('h3','Inspection guidance'),node('p','Preparing inspection guidance...','compact-note'));
  if(species.trim().length<3){host.replaceChildren(node('h3','Inspection guidance'),node('p','Identify the plant first to receive species-specific inspection guidance.'));return;}
+ const saved=[...(report.work_items??[])].reverse().find(work=>work.inspection&&work.inspection.species.toLowerCase()===species.toLowerCase())?.inspection;
+ if(saved){renderInspectionCard(host,{inspection:saved,inspection_brief:saved.brief},true);host.inspectionDraft.requestedSpecies=species;return;}
  if(!inspectionRequests.has(key)){
   const task=post(`/reports/${report.id}/inspection-draft`,{revision:report.revision,species}).catch(()=>api(`/reports/${report.id}/inspection-guidance?confirmed_species=${encodeURIComponent(species)}`));
   inspectionRequests.set(key,task);if(inspectionRequests.size>100)inspectionRequests.delete(inspectionRequests.keys().next().value);
  }
- try{const result=await inspectionRequests.get(key);if(host.isConnected===false||host.dataset.inspectionKey!==key)return;renderInspectionCard(host,result,report.review?.confirmed_invasive===true&&report.review?.confirmed_species===species);}
+ try{const result=await inspectionRequests.get(key);if(host.isConnected===false||host.dataset.inspectionKey!==key)return;renderInspectionCard(host,result,report.review?.confirmed_invasive===true&&report.review?.confirmed_species===species);host.inspectionDraft.requestedSpecies=species;}
  catch{inspectionRequests.delete(key);if(host.isConnected!==false&&host.dataset.inspectionKey===key)host.replaceChildren(node('h3','Inspection guidance'),node('p','Guidance could not be loaded. Refresh when connected.'));}
 }
 function formatSteps(value){
@@ -195,7 +200,13 @@ function planFields(form,initial={},report=null,reviewNotes=null){
   if(editor.hidden)throw new Error('Wait for the restoration draft, or retry if generation failed.');
   const plan=Object.fromEntries(Object.entries(sections).map(([key,body])=>[key,draftText(key,content(body)).trim()]));
   for(const [key,value] of Object.entries(plan)){if(!value)throw new Error('Complete '+labels[key].toLowerCase()+' in the draft.');if(value.length>(key==='replacement_species'?160:1600))throw new Error(labels[key]+' is too long.');}
-  return {work_type:'restoration',assigned_team_id:crew.value,due_on:due.value,priority:initial.priority??'normal',confirmed_species:species.value.trim(),confirmed_invasive:true,removal_instructions:plan.removal_instructions,replacement_species:plan.replacement_species,replanting_instructions:plan.replanting_instructions,notes:plan.review_notes,research_sources:researchSources.map(source=>source.url).slice(0,8)};
+  const inspectionHost=document.getElementById?.('inspection-guidance');
+  const inspected=inspectionHost?.dataset.reportId===report.id?inspectionHost.inspectionDraft:null;
+  if(inspectionHost&&inspectionHost.dataset.reportId===report.id&&(!inspected||inspected.requestedSpecies.toLowerCase()!==species.value.trim().toLowerCase()))throw new Error('Wait for inspection guidance for the current species before saving.');
+  const inspectionBrief=inspected?.brief??initial.inspection?.brief??'';
+  if(inspectionBrief.length>1600)throw new Error('Keep inspection guidance under 1600 characters.');
+  if(inspected&&!inspectionBrief.trim())throw new Error('Complete the inspection guidance before saving.');
+  return {inspection_brief:inspectionBrief,work_type:'restoration',assigned_team_id:crew.value,due_on:due.value,priority:initial.priority??'normal',confirmed_species:species.value.trim(),confirmed_invasive:true,removal_instructions:plan.removal_instructions,replacement_species:plan.replacement_species,replanting_instructions:plan.replanting_instructions,notes:plan.review_notes,research_sources:researchSources.map(source=>source.url).slice(0,8)};
  };
  values.cancel=cancel;return values;
 }
@@ -230,6 +241,19 @@ function drawWork(detail,report,work){
  if(work.requires_reassignment)card.append(node('p','This older job needs an explicit reassignment to an ecology team.','error'));
  for(const [label,key] of [['Confirmed species','confirmed_species'],['Approved removal instructions','removal_instructions'],['Approved replacement','replacement_species'],['Replanting instructions','replanting_instructions']])if(work[key])card.append(fact(label,draftText(key,work[key])));
  if(work.research_sources?.length){const references=node('details');references.append(node('summary','Plan research sources'));appendResearchLinks(references,work.research_sources.map(url=>({url,title:url})));card.append(references);}
+ if(work.inspection){card.append(node('h4','Approved inspection guidance'),node('p',work.inspection.brief,'note'),node('p','Inspection area: '+(work.inspection.location.block_ids?.join(' / ')||'Reported location'),'compact-note'));if(work.inspection.source)appendResearchLinks(card,[work.inspection.source]);}
+ for(const item of work.inspections??[]){
+  const result=node('section',undefined,'inspection-result');const names={found:'Additional plants found',none:'No additional plants found',unable:'Unable to inspect'};
+  result.append(node('h4',names[item.outcome]),node('p',item.notes),node('p',`${item.submitted_by} · ${item.observed_on}`,'compact-note'));
+  if(item.outcome==='found')result.append(node('p','Additional sightings need a management decision. Removal is not approved.','compact-note'));
+  for(const [index,finding] of item.findings.entries()){
+   result.append(node('p',`Plant ${index+1}: ${finding.latitude.toFixed(6)}, ${finding.longitude.toFixed(6)}${finding.notes?' · '+finding.notes:''}`));photos(result,report,[finding.photo_id]);
+   const map=node('div');map.hidden=true;result.append(button('View plant '+(index+1)+' location',()=>{map.hidden=!map.hidden;if(!map.hidden&&!map.childNodes.length)drawLocation(map,{...report,latitude:finding.latitude,longitude:finding.longitude,location_mode:'osm',map_id:'elmina-lakeside-v1'});}));result.append(map);
+  }
+  if(item.review_status==='reviewed')result.append(node('p',`Reviewed by ${item.reviewed_by}: ${item.review_notes}`,'compact-note'));
+  else{const review=node('form');const note=text(review,'Inspection review note','inspection_review_'+item.id);note.required=true;const err=node('p','','error'),save=node('button','Mark inspection reviewed','secondary');save.type='submit';review.append(err,save);review.addEventListener('submit',async event=>{event.preventDefault();save.disabled=true;try{await post(`/reports/${report.id}/work/${work.id}/inspection/review`,{revision:work.revision,inspection_id:item.id,notes:note.value.trim()});await loadReports();await loadNotices();}catch(error){err.textContent=error.message;save.disabled=false;}});result.append(review);}
+  card.append(result);
+ }
  for(const [index,c] of work.completions.entries()){
   const evidence=node('div',undefined,'evidence-record');evidence.append(node('h3',`Evidence ${index+1}`),fact('Visit date',c.observed_on),node('p',c.notes,'note'));
   for(const [label,key] of [['Plant identified by ecology team','suggested_species'],['Recommended next step','recommended_action'],['Suggested removal method','removal_recommendation'],['Suggested replacement','replacement_recommendation'],['Removed on','removed_on']])if(c[key])evidence.append(fact(label,c[key]));

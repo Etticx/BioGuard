@@ -3,8 +3,8 @@ import {Linking,StyleSheet} from 'react-native';
 import {WebView} from 'react-native-webview';
 import {base} from '../services/reports';
 import {decodeMapMessage,elminaMapUrl,isElminaMapPage,ELMINA_MAP_ID,type ElminaMapProps} from '../services/elminaMap';
-export function ElminaMap({initial,onPoint,onReady,onError}:ElminaMapProps){
- const url=elminaMapUrl(base,undefined,'picker',initial);const ready=useRef(false);
+export function ElminaMap({initial,onPoint,onReady,onError,mode='picker'}:ElminaMapProps){
+ const url=elminaMapUrl(base,undefined,mode,initial);const ready=useRef(false);
  useEffect(()=>{const timer=setTimeout(()=>{if(!ready.current)onError('The map could not load. Check your connection and retry.');},25000);return()=>clearTimeout(timer);},[onError]);
  return <WebView source={{uri:url}} style={styles.map} applicationNameForUserAgent="BioGuard/0.2" originWhitelist={['http://*','https://*']} javaScriptEnabled scrollEnabled={false} bounces={false}
   onShouldStartLoadWithRequest={request=>{

@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator, ValidationError
 from typing import Literal
 from starlette.concurrency import run_in_threadpool
+from starlette.datastructures import UploadFile
 from reporting import user_from, read_photo, LIMIT, Review
 from records import RecordConflict
 
@@ -182,3 +183,47 @@ def download(name:str,request:Request):
     if not target.is_file():raise HTTPException(404,"Backup not found.")
     request.app.state.records.audit(actor,"backup_downloaded",name)
     return FileResponse(target,filename=name,media_type="application/octet-stream",headers={"Cache-Control":"no-store"})
+
+
+class InspectionFinding(Strict):
+    latitude:float
+    longitude:float
+    notes:str=Field(default='',max_length=500)
+    @model_validator(mode='after')
+    def valid_point(self):
+        from map_bounds import in_elmina
+        if not in_elmina(self.latitude,self.longitude):raise ValueError('Pin additional plants inside the pilot area.')
+        return self
+
+class InspectionResult(Strict):
+    revision:int=Field(ge=1)
+    request_key:str=Field(min_length=8,max_length=100,pattern=r'^[a-zA-Z0-9_-]+$')
+    outcome:Literal['found','none','unable']
+    observed_on:date
+    notes:str=Field(min_length=1,max_length=1600)
+    findings:list[InspectionFinding]=Field(default_factory=list,max_length=5)
+    @model_validator(mode='after')
+    def valid_result(self):
+        if self.observed_on>field_today():raise ValueError('Inspection date cannot be in the future.')
+        if (self.outcome=='found')!=bool(self.findings):raise ValueError('Record pins only when additional plants were found.')
+        return self
+
+class InspectionReview(Strict):
+    revision:int=Field(ge=1)
+    inspection_id:str=Field(min_length=1,max_length=100)
+    notes:str=Field(min_length=1,max_length=1600)
+
+@router.post('/reports/{identifier}/work/{work_id}/inspection')
+async def record_inspection(identifier:str,work_id:str,request:Request):
+    user=user_from(request,'ecology')
+    async with request.form(max_files=5,max_fields=1,max_part_size=LIMIT) as form:
+        try:details=InspectionResult.model_validate_json(form.get('details',''))
+        except (ValidationError,TypeError):raise HTTPException(422,'Check the inspection result, date, notes and plant pins.') from None
+        photos=[await read_photo(form.get('photo_'+str(i))) for i in range(len(details.findings))]
+        if sum(isinstance(v,UploadFile) for _,v in form.multi_items())!=len(photos):raise HTTPException(422,'Each finding must have exactly one photo.')
+        values=details.model_dump(mode='json');digest=sha256(json.dumps(values,sort_keys=True).encode()+b''.join(sha256(content).digest() for _,content in photos)).hexdigest()
+        return await run_in_threadpool(invoke,request.app.state.records.record_inspection,identifier,work_id,user,values,photos,digest)
+
+@router.post('/reports/{identifier}/work/{work_id}/inspection/review')
+def review_inspection(identifier:str,work_id:str,details:InspectionReview,request:Request):
+    return invoke(request.app.state.records.review_inspection,identifier,work_id,user_from(request,'management'),details.model_dump(mode='json'))

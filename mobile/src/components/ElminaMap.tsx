@@ -1,8 +1,8 @@
 import {useEffect,useRef} from 'react';
 import {base} from '../services/reports';
 import {decodeMapMessage,elminaMapUrl,ELMINA_MAP_ID,type ElminaMapProps} from '../services/elminaMap';
-export function ElminaMap({initial,onPoint,onReady,onError}:ElminaMapProps){
- const frame=useRef<HTMLIFrameElement>(null);const url=elminaMapUrl(base,window.location.origin,'picker',initial);
+export function ElminaMap({initial,onPoint,onReady,onError,mode='picker'}:ElminaMapProps){
+ const frame=useRef<HTMLIFrameElement>(null);const url=elminaMapUrl(base,window.location.origin,mode,initial);
  useEffect(()=>{
   let ready=false;const timer=setTimeout(()=>{if(!ready)onError('The map could not load. Check your connection and retry.');},25000);
   const receive=(event:MessageEvent)=>{

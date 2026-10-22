@@ -189,6 +189,10 @@ class OperationsMixin:
             raise ValueError("Approve the invasive species, removal instructions and replacement planting plan.")
         identifier,timestamp=uuid4().hex,now()
         data={**plan,"completions":[],"verification":None,"history":[{"at":timestamp,"action":"assigned","by":user["display_name"]}]}
+        if plan.get('inspection_brief'):
+            from inspection_results import snapshot
+            report_data=json.loads(db.execute('SELECT data FROM reports WHERE id=?',(report_id,)).fetchone()[0])
+            data['inspection']=snapshot(plan['inspection_brief'],plan['confirmed_species'],report_data,user)
         db.execute("INSERT INTO work_items VALUES (?,?,?,?,?,?,?,?)",(identifier,report_id,team_id,"assigned",1,timestamp,timestamp,json.dumps(data)))
         self.emit(db,"work_"+identifier,report_id,"A field visit has been assigned to your team.",team_id=team_id)
         return identifier
@@ -247,6 +251,11 @@ class OperationsMixin:
             if data["completions"] and data["work_type"] != plan["work_type"]:
                 raise ValueError("Keep the visit type after evidence has been submitted. Cancel and create a new visit to change it.")
             previous_team=work["team_id"]
+            if plan.get('inspection_brief'):
+                from inspection_results import snapshot
+                data['inspection']=snapshot(plan['inspection_brief'],plan['confirmed_species'],json.loads(row['data']),user)
+            elif data.get('inspection') and data['inspection']['species'].casefold()!=plan.get('confirmed_species','').casefold():
+                data.pop('inspection',None)
             data.update(plan)
             data["history"].append({"at":now(),"action":"instructions_revised","by":user["display_name"],"notes":plan["notes"]})
             db.execute("UPDATE work_items SET team_id=?,status='assigned',revision=revision+1,updated_at=?,data=? WHERE id=?",(team_id,now(),json.dumps(data),work_id))
@@ -297,6 +306,7 @@ class OperationsMixin:
                 if previous["digest"]!=digest:conflict("This evidence submission key was already used for different content.")
                 return self.get_report(identifier,user)
             if work["revision"]!=details["revision"] or work["status"] not in {"accepted","in_progress","correction_requested","blocked"}:conflict("This visit changed. Refresh it before submitting evidence.")
+            if data.get('inspection') and not data.get('inspections'):raise ValueError('Record the inspection result before submitting restoration evidence.')
             kind=data["work_type"];stage=details["stage"]
             if kind not in {"restoration","inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Ask management for a new assignment.")
             if kind=="inspection" and (not details.get("suggested_species") or not details.get("recommended_action")):raise ValueError("Record the inspected species and recommended next action.")
@@ -351,6 +361,8 @@ class OperationsMixin:
                     removed=any(item.get("removal_complete") and item.get("removed_on") and item.get("photo_ids") for item in data["completions"])
                     if not removed or last.get("stage") not in {"both","replanting"} or not all(last.get(key) for key in ("planted_on","planted_species","quantity","photo_ids")):
                         raise ValueError("Removal and replanting evidence are required before closing restoration.")
+            if details['decision']=='accept' and data.get('inspection') and (not data.get('inspections') or any(item.get('review_status')!='reviewed' for item in data.get('inspections',[]))):
+                raise ValueError('Review the inspection results before closing this job.')
             next_plan=details.get("next_plan")
             if next_plan and next_plan["revision"]!=row["revision"]:conflict("This report changed. Refresh before approving the next plan.")
             if next_plan and next_plan.get("decision")!="assign":raise ValueError("Choose assignment for the next plan.")

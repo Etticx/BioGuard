@@ -14,8 +14,11 @@ import { recoverVisitDraft, requiresVisitReview, visitStage } from '../services/
 import { CheckField } from './CheckField';
 import { colors } from '../theme';
 import { packVisitPhotos, visitPhotos } from '../services/visitPhotos';
+import {InspectionResultForm} from './InspectionResultForm';
+import {ReportLocationMap} from './ReportLocationMap';
+import {isElminaPoint} from '../services/elminaMap';
 
-export function WorkVisit({work,onUpdate,draftId}:{work:WorkItem;onUpdate:(report:FieldReport)=>void;draftId?:string}){
+export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:FieldReport;onUpdate:(report:FieldReport)=>void;draftId?:string}){
  const {session,endSession}=useTeamSession();
  const photo=useIdentification();
  const plantingPhoto=useIdentification();
@@ -97,6 +100,9 @@ export function WorkVisit({work,onUpdate,draftId}:{work:WorkItem;onUpdate:(repor
   <Text>{work.team_name} · {work.status.replaceAll('_',' ')}</Text>
   <Text>{work.due_on?'Due '+work.due_on:'Ask management for a visit date'}{work.overdue?' · Overdue':''}{work.priority==='high'?' · High priority':''}</Text>
   <Text>{work.notes}</Text>
+  <Text variant="titleMedium">Plant location</Text>
+  <ReportLocationMap point={isElminaPoint(work.inspection?.point)?work.inspection.point:report.location_mode==='osm'&&isElminaPoint(report)?report:null}/>
+  {work.inspection&&<InspectionResultForm work={work} report={report} onUpdate={onUpdate}/>}
   {!!work.confirmed_species&&<Text>Approved species: {work.confirmed_species}</Text>}
   {!!work.removal_instructions&&<><Text variant="labelLarge">Removal instructions</Text><Text>{work.removal_instructions}</Text></>}
   {!!work.replacement_species&&<><Text variant="labelLarge">Replacement: {work.replacement_species}</Text><Text>{work.replanting_instructions}</Text></>}
