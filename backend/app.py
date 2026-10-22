@@ -72,7 +72,7 @@ def create_app(predictor_factory=None, data_dir=None, seed_accounts=True, privat
                 with suppress(asyncio.CancelledError):await task
             api.state.predictor=None
 
-    api = FastAPI(title="BioGuard", version="0.2.0", lifespan=lifespan,
+    api = FastAPI(title="BioGuard", version="1.0.0", lifespan=lifespan,
                   docs_url=None if private_beta else "/docs",redoc_url=None if private_beta else "/redoc",openapi_url=None if private_beta else "/openapi.json")
     api.state.private_beta=private_beta
     api.state.cookie_name="bioguard_beta_session" if private_beta else "bioguard_session"

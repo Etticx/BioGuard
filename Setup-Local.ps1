@@ -1,7 +1,7 @@
 # One-time Windows preparation. Run from the BioGuard folder in PowerShell.
 $ErrorActionPreference='Stop'
 $bioRoot=$PSScriptRoot
-foreach($bioFile in @('backend/requirements.txt','backend/records.py','backend/inspection_rules.json','web/elmina-inspection-blocks.geojson','web/elmina-map-config.json','mobile/package.json','mobile/package-lock.json','mobile/src/app/_layout.tsx','bioguard_comparison_winner.zip')) {
+foreach($bioFile in @('backend/requirements.txt','backend/completion_pdf.py','backend/records.py','backend/inspection_rules.json','web/elmina-inspection-blocks.geojson','web/elmina-map-config.json','mobile/package.json','mobile/package-lock.json','mobile/src/app/_layout.tsx','bioguard_comparison_winner.zip')) {
  if(-not (Test-Path -LiteralPath (Join-Path $bioRoot $bioFile))) { throw "Missing $bioFile. Ask the project owner for the complete BioGuard source/model files before continuing." }
 }
 $bioNodeCommand=Get-Command node -ErrorAction SilentlyContinue

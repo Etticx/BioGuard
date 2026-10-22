@@ -2,7 +2,7 @@
   "expo": {
     "name": "BioGuard",
     "slug": "bioguard",
-    "version": "0.2.0",
+    "version": "1.0.0",
     "scheme": "bioguard",
     "orientation": "portrait",
     "icon": "./assets/bioguard-icon.png",

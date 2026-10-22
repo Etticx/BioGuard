@@ -44,7 +44,7 @@ Inspection results: accept the job, record the inspection, and submit its result
 
 The browser/Expo quick start in the README is the recommended way to test on a new computer. A previously installed APK continues to contact the address embedded when it was built.
 
-To make a new standalone build, first arrange a reachable HTTPS backend. Update `mobile/eas.json` → `build.preview.env.EXPO_PUBLIC_API_URL` to that backend (the current checked-in temporary tunnel address is not a stable service). From `mobile/`, run:
+To make a new standalone build, first arrange a reachable HTTPS backend. Update `mobile/eas.json` → `build.preview.env.EXPO_PUBLIC_API_URL` to that backend (the obsolete temporary tunnel address has been removed; configure the chosen address before building). From `mobile/`, run:
 
 ```powershell
 npx eas-cli@latest build --platform android --profile preview

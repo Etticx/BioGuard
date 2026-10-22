@@ -215,3 +215,7 @@ Tests use synthetic fixtures. They do not replace a field trial, a physical phon
 The quick-start scripts above are **Windows PowerShell scripts**. Do not paste them into a macOS/Linux shell. The repository also includes Docker and HTTPS deployment configuration for a separate hosting workflow; these require additional account, storage and security configuration. Local browser success is not proof that a public deployment or an existing APK works.
 
 See [running and feature notes](docs/RUNNING_AND_AI.md) for mapping, inspection, AI budgets and APK details. This is a private prototype; no public deployment is performed by local setup.
+
+## Final demo release and Android APK
+
+The prepared source version is **1.0.0**. See [the final release guide](docs/FINAL_RELEASE.md) for the separate APK build, backend address, version tracking and physical-phone checks. Pulling this repo does not update an APK already installed on a phone. The older 0.2.0 APK is not the final build.

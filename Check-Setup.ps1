@@ -10,7 +10,7 @@ if($bioNode){
  $bioVersion=(& $bioNode.Source --version).TrimStart('v') -as [version]
  Show-BioCheck 'Node.js' ($null -ne $bioVersion -and $bioVersion.Major -eq 24 -and $bioVersion -ge [version]'24.3.0') "Found $bioVersion; setup expects Node 24 LTS."
 }else{Show-BioCheck 'Node.js' $false 'Install Node 24 LTS and reopen PowerShell.'}
-foreach($bioFile in @('backend/requirements.txt','backend/inspection_rules.json','web/elmina-inspection-blocks.geojson','web/elmina-map-config.json','mobile/package-lock.json','bioguard_comparison_winner.zip')){
+foreach($bioFile in @('backend/requirements.txt','backend/completion_pdf.py','backend/inspection_rules.json','web/elmina-inspection-blocks.geojson','web/elmina-map-config.json','mobile/package-lock.json','bioguard_comparison_winner.zip')){
  Show-BioCheck $bioFile (Test-Path -LiteralPath (Join-Path $bioRoot $bioFile)) 'Required project file.'
 }
 $bioPython=Join-Path $bioRoot 'backend/.venv/Scripts/python.exe'
@@ -21,7 +21,7 @@ from pathlib import Path
 root=Path(sys.argv[1])
 assert sys.version_info[:2]==(3,12),'Recreate the environment using Python 3.12.'
 assert Path(sys.prefix).resolve()==(root/'backend/.venv').resolve(),'Use this checkout\'s environment, not a copied environment.'
-for package in ['tensorflow','keras','numpy','pillow','fastapi','uvicorn','python-multipart']:
+for package in ['tensorflow','keras','numpy','pillow','fastapi','uvicorn','python-multipart','reportlab']:
     print(package+': '+importlib.metadata.version(package))
 required=['bioguard.keras','class_names.json','preprocessing.json','selection.json','species_policy.json']
 for name in required:assert (root/'backend/model'/name).is_file(),'Missing installed model file: '+name

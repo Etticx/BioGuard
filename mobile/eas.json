@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">=16.0.0"
+    "version": ">=16.0.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -17,15 +18,19 @@
       },
       "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_PRIVATE_BETA": "1",
-        "EXPO_PUBLIC_API_URL": "https://stickers-turbo-tank-hand.trycloudflare.com"
-      }
+        "EXPO_PUBLIC_PRIVATE_BETA": "1"
+      },
+      "autoIncrement": true
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
       },
-      "environment": "production"
+      "environment": "production",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_PRIVATE_BETA": "1"
+      }
     }
   }
 }
