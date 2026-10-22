@@ -35,8 +35,9 @@ def test_explicit_removal_then_approved_planting_and_closure(setup):
  r=accept(client,ecology,r)
  r=evidence(client,ecology,r,request_key='planting_test_123').json()
  response=verify(client,management,r);assert response.status_code==200,response.text;r=response.json()
- assert r['status']=='completed' and len(r['work_items'])==2
- assert len(r['photos'])==3 and all(w['status']=='verified' for w in r['work_items'])
+ assert r['status']=='follow_up' and len(r['work_items'])==3
+ assert r['work_items'][-1]['followup_of']==r['work_items'][-2]['id']
+ assert len(r['photos'])==3 and all(w['status']=='verified' for w in r['work_items'][:-1]) and r['work_items'][-1]['status']=='assigned'
  assert len(r['history'])>=6
 
 

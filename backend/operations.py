@@ -1,7 +1,7 @@
 """Workflow upgrades. All state transitions and their audit records commit together."""
 from field_clock import field_today
 from contextlib import closing
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -250,6 +250,7 @@ class OperationsMixin:
             if data.get("work_type") not in {"restoration","inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Cancel it and assign a new visit.")
             if data["completions"] and data["work_type"] != plan["work_type"]:
                 raise ValueError("Keep the visit type after evidence has been submitted. Cancel and create a new visit to change it.")
+            if data.get("followup_of") and plan["work_type"]!="inspection":raise ValueError("Keep this follow-up as an inspection; approve corrective work after reviewing findings.")
             previous_team=work["team_id"]
             if plan.get('inspection_brief'):
                 from inspection_results import snapshot
@@ -306,10 +307,17 @@ class OperationsMixin:
                 if previous["digest"]!=digest:conflict("This evidence submission key was already used for different content.")
                 return self.get_report(identifier,user)
             if work["revision"]!=details["revision"] or work["status"] not in {"accepted","in_progress","correction_requested","blocked"}:conflict("This visit changed. Refresh it before submitting evidence.")
-            if data.get('inspection') and not data.get('inspections'):raise ValueError('Record the inspection result before submitting restoration evidence.')
+            if data.get('inspection') and not data.get('followup_of') and not data.get('inspections'):raise ValueError('Record the inspection result before submitting restoration evidence.')
             kind=data["work_type"];stage=details["stage"]
             if kind not in {"restoration","inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Ask management for a new assignment.")
-            if kind=="inspection" and (not details.get("suggested_species") or not details.get("recommended_action")):raise ValueError("Record the inspected species and recommended next action.")
+            if kind=="inspection" and not data.get("followup_of") and (not details.get("suggested_species") or not details.get("recommended_action")):raise ValueError("Record the inspected species and recommended next action.")
+            if data.get("followup_of"):
+                if details.get("regrowth") not in {"yes","no","unknown"} or details.get("replacement_condition") not in {"healthy","struggling","dead","unable"} or details.get("other_invasive") not in {"yes","no"}:
+                    raise ValueError("Record invasive regrowth, replacement condition and other suspected plants.")
+                if details.get("other_invasive")=="yes":
+                    from map_bounds import in_elmina
+                    if len(photos)<2 or not in_elmina(details.get("finding_latitude"),details.get("finding_longitude")):
+                        raise ValueError("Add a photo and an Elmina map pin for the suspected plant.")
             if kind=="inspection" and details.get("recommended_action")=="removal" and not details.get("removal_recommendation"):raise ValueError("Describe the recommended removal plan for management review.")
             if kind=="inspection" and details.get("recommended_action")=="replanting" and not details.get("replacement_recommendation"):raise ValueError("Describe the recommended replacement planting for management review.")
             if kind=="removal" and stage!="removal" or kind=="replanting" and stage!="replanting" or kind=="removal_replanting" and stage not in {"removal","both"} or kind in {"inspection","monitoring","follow_up"} and stage!="observation":raise ValueError("Choose the evidence stage for this visit.")
@@ -355,14 +363,18 @@ class OperationsMixin:
             if not data.get("completions"):raise ValueError("This visit has no evidence to review.")
             row=db.execute("SELECT * FROM reports WHERE id=?",(identifier,)).fetchone()
             if data.get("work_type")=="restoration":
-                if details.get("next_plan") or details.get("next_visit_on"):raise ValueError("Review both parts of the same restoration job; use corrections for unfinished work.")
+                if details.get("next_plan") or details.get("no_followup_reason"):raise ValueError("Completed restoration requires its linked follow-up inspection.")
                 if details["decision"]=="accept":
                     last=data["completions"][-1]
                     removed=any(item.get("removal_complete") and item.get("removed_on") and item.get("photo_ids") for item in data["completions"])
                     if not removed or last.get("stage") not in {"both","replanting"} or not all(last.get(key) for key in ("planted_on","planted_species","quantity","photo_ids")):
                         raise ValueError("Removal and replanting evidence are required before closing restoration.")
-            if details['decision']=='accept' and data.get('inspection') and (not data.get('inspections') or any(item.get('review_status')!='reviewed' for item in data.get('inspections',[]))):
+            if details['decision']=='accept' and data.get('inspection') and not data.get('followup_of') and (not data.get('inspections') or any(item.get('review_status')!='reviewed' for item in data.get('inspections',[]))):
                 raise ValueError('Review the inspection results before closing this job.')
+            if details['decision']=='accept' and data.get('followup_of') and not details.get('next_plan'):
+                last=data['completions'][-1]
+                if last.get('regrowth')!='no' or last.get('replacement_condition')!='healthy' or last.get('other_invasive')!='no':
+                    raise ValueError('Assign a corrective or repeat inspection plan before closing findings that need further action.')
             next_plan=details.get("next_plan")
             if next_plan and next_plan["revision"]!=row["revision"]:conflict("This report changed. Refresh before approving the next plan.")
             if next_plan and next_plan.get("decision")!="assign":raise ValueError("Choose assignment for the next plan.")
@@ -377,8 +389,24 @@ class OperationsMixin:
                 parent="assigned"
                 self.emit(db,f"correction_{work_id}_{work['revision']}",identifier,"Management requested changes to your visit evidence.",team_id=work["team_id"])
             elif decision=="reopen":parent="submitted"
+            elif not next_plan and data['work_type'] in {'restoration','replanting'} and data['completions'][-1].get('planted_on'):
+                last=data['completions'][-1]
+                due=details.get('next_visit_on') or (date.fromisoformat(last['planted_on'])+timedelta(days=14)).isoformat()
+                if date.fromisoformat(due)<date.fromisoformat(last['planted_on']):raise ValueError('Follow-up cannot precede replanting.')
+                point={key:report_data.get(key) for key in ('latitude','longitude','location_mode','map_id','demo_pin')}
+                plan={key:data.get(key,'') for key in ('confirmed_species','confirmed_invasive','replacement_species','replanting_instructions')}
+                plan.update({'work_type':'inspection','due_on':due,'priority':data.get('priority','normal'),
+                    'notes':'Inspect the restored location for invasive regrowth and check replacement planting. Report findings and photographs to management; removal is not authorised by this inspection.',
+                    'previous_work_id':work_id,'followup_of':work_id,
+                    'restoration_snapshot':{'planted_on':last['planted_on'],'planted_species':last['planted_species'],'quantity':last['quantity'],
+                        'completions':data['completions'],'point':point,'inspection':data.get('inspection')}})
+                self.new_work(db,identifier,work['team_id'],plan,user)
+                report_data['restoration_approved_followup_pending']=True
+                parent='follow_up'
             elif next_plan:
                 plan={**next_plan,"previous_work_id":work_id}
+                if data.get("followup_of") and plan["work_type"]=="inspection":
+                    plan.update({"followup_of":data["followup_of"],"restoration_snapshot":data.get("restoration_snapshot")})
                 next_team=plan["assigned_team_id"]
                 self.new_work(db,identifier,next_team,plan,user)
                 team=db.execute("SELECT name FROM teams WHERE id=?",(next_team,)).fetchone()
@@ -394,6 +422,7 @@ class OperationsMixin:
                 self.new_work(db,identifier,next_team,plan,user)
                 parent="assigned"
             else:parent="completed"
+            if parent=="completed":report_data.pop("restoration_approved_followup_pending",None)
             if decision!="corrections":
                 self.emit(db,f"verified_{work_id}_{work['revision']}",identifier,"Management approved your evidence. "+("This case is complete." if parent=="completed" else "Check the next instructions."),team_id=work["team_id"])
             self.event(db,row,report_data,"verification_"+decision,user,details["notes"],parent,next_team)

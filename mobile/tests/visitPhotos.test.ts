@@ -94,3 +94,11 @@ test('an explicit queued original draft takes priority over its newer saved cont
  const recovered=await recoverVisitDraft('tester',{id:'job',report_id:'report'},{list:async()=>[continuation,original],open:async()=>{assert.fail('Queued originals stay immutable');}},original.id);
  assert.equal(recovered,original);
 });
+
+test('follow-up drafts submit the current site photo and additional suspected plant photo in order',()=>{
+ const draft=evidence('observation');draft.photoSlots={visit:0,planting:1};
+ (draft.details as Completion).other_invasive='yes';
+ assert.deepEqual(completionPhotoUris(draft),['removal-photo','planting-photo']);
+ delete draft.photoSlots.planting;
+ assert.throws(()=>completionPhotoUris(draft),/add the photo/);
+});

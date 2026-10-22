@@ -38,6 +38,10 @@ class Completion(Strict):
     quantity:int|None=Field(default=None,ge=1,le=100000)
     planting_pending_reason:str=Field(default="",max_length=1600)
     regrowth:Literal["yes","no","unknown"]|None=None
+    replacement_condition:Literal["healthy","struggling","dead","unable"]|None=None
+    other_invasive:Literal["yes","no"]|None=None
+    finding_latitude:float|None=None
+    finding_longitude:float|None=None
     surviving_count:int|None=Field(default=None,ge=0,le=100000)
     checked_count:int|None=Field(default=None,ge=1,le=100000)
     suggested_species:str=Field(default="",max_length=160)
@@ -65,7 +69,6 @@ class Verification(Strict):
         if self.next_plan:
             if self.decision!="accept" or self.next_plan.decision!="assign":raise ValueError("An approved next assignment belongs to acceptance only.")
             if self.next_visit_on or self.assigned_team_id or self.no_followup_reason:raise ValueError("Use the next plan without older next-visit fields.")
-        if self.next_visit_on and self.next_visit_on<field_today():raise ValueError("Schedule the next visit today or later.")
         if self.decision!="accept" and (self.next_visit_on or self.assigned_team_id or self.no_followup_reason):raise ValueError("Next-visit fields belong to acceptance only.")
         if self.assigned_team_id and not self.next_visit_on:raise ValueError("Choose a next visit date with the team.")
         return self
@@ -114,6 +117,8 @@ async def complete(identifier:str,work_id:str,request:Request):
         values=details.model_dump(mode="json")
         # Keep pre-restoration upload fingerprints stable for queued evidence retries.
         if not values.get("planting_pending_reason"):values.pop("planting_pending_reason",None)
+        for key in ("replacement_condition","other_invasive","finding_latitude","finding_longitude"):
+            if values.get(key) is None:values.pop(key,None)
         digest=sha256(json.dumps(values,sort_keys=True).encode()+b"".join(sha256(photo[1]).digest() for photo in photos)).hexdigest()
         return await run_in_threadpool(invoke,request.app.state.records.complete_work,identifier,work_id,user,values,photos,digest)
 

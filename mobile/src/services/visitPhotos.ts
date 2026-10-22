@@ -38,7 +38,7 @@ export function completionPhotoUris(draft: Draft): string[] {
   // Positional queued drafts retain their exact original request body for retries.
   if (!draft.photoSlots) return draft.uris;
   const photos = visitPhotos(draft), stage = (draft.details as Completion).stage;
-  const selected = stage === 'both' ? [photos.removal, photos.planting]
+  const selected = stage === 'observation' && (draft.details as Completion).other_invasive === 'yes' ? [photos.visit,photos.planting] : stage === 'both' ? [photos.removal, photos.planting]
     : [stage === 'removal' ? photos.removal : stage === 'replanting' ? photos.planting : photos.visit];
   if (selected.some(uri => !uri)) throw new RequestError('Reopen this evidence draft and add the photo for its selected stage.', 422);
   return selected as string[];

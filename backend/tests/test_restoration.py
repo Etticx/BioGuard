@@ -40,7 +40,7 @@ def test_restoration_requires_both_management_approved_plans(setup,change):
     assert client.get(f"/reports/{report['id']}",headers=management).json()['work_items']==[]
 
 
-def test_both_tasks_share_one_job_and_management_closes_it(setup):
+def test_both_tasks_share_one_job_then_management_schedules_followup(setup):
     client,_,management,*_=setup
     report=assigned(setup);job=report['work_items'][0]['id']
     assert evidence(setup,report,two=False).status_code==422
@@ -52,7 +52,8 @@ def test_both_tasks_share_one_job_and_management_closes_it(setup):
     retry=evidence(setup,report);assert retry.status_code==200 and len(retry.json()['photos'])==3
     assert evidence(setup,report,notes='Different content').status_code==409
     closed=verify(client,management,ready);assert closed.status_code==200,closed.text
-    assert closed.json()['status']=='completed' and len(closed.json()['work_items'])==1
+    assert closed.json()['status']=='follow_up' and len(closed.json()['work_items'])==2
+    assert closed.json()['work_items'][-1]['followup_of']==job
 
 
 def test_pending_planting_stays_active_until_the_same_job_is_finished(setup):
@@ -70,7 +71,7 @@ def test_pending_planting_stays_active_until_the_same_job_is_finished(setup):
     assert final.status_code==200,final.text
     ready=final.json();assert ready['status']=='awaiting_verification'
     assert len(ready['work_items'])==1 and len(ready['work_items'][0]['completions'])==2
-    assert verify(client,management,ready).json()['status']=='completed'
+    assert verify(client,management,ready).json()['status']=='follow_up'
 
 
 def test_corrections_preserve_both_photos_and_the_same_assignment(setup):
@@ -81,7 +82,7 @@ def test_corrections_preserve_both_photos_and_the_same_assignment(setup):
     ready=evidence(setup,corrected,key='corrected_restoration')
     assert ready.status_code==200,ready.text
     assert len(ready.json()['work_items'])==1 and len(ready.json()['photos'])==5
-    assert verify(client,management,ready.json()).json()['status']=='completed'
+    assert verify(client,management,ready.json()).json()['status']=='follow_up'
 
 
 def test_partial_evidence_cannot_be_accepted_even_if_stored_status_is_incorrect(setup):

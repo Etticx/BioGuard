@@ -53,3 +53,15 @@ test('classification preserves historical evidence and keeps unrecognised unfini
   assert.deepEqual(item, saved);
   assert.equal(ecologyJobGroup(report('awaiting_verification'), 'eco'), 'review');
 });
+
+test('follow-up stays upcoming including overdue and moves to review only on submission', () => {
+ const item=report('follow_up', [['verified','eco'],['assigned','eco']]);
+ item.work_items[1].followup_of='restoration';item.work_items[1].overdue=true;
+ assert.equal(ecologyJobGroup(item,'eco'),'upcoming');
+ assert.match(ecologyJobLabel(item,'eco'),/follow-up pending/);
+ item.work_items[1].status='awaiting_verification';
+ assert.equal(ecologyJobGroup(item,'eco'),'review');
+ item.work_items[1].status='correction_requested';
+ assert.equal(ecologyJobGroup(item,'eco'),'upcoming');
+ assert.equal(ecologyJobGroup(item,'other'),'active');
+});

@@ -29,12 +29,12 @@ export function TeamReports({ onBack, initialReportId, draftId, home = false }: 
   if(!session)return <Redirect href="/"/>;
   if(session.user.must_change_password)return <TeamSignIn/>;
   const ecology=session.user.role==='ecology';
-  const counts={active:0,review:0,past:0};
+  const counts={active:0,review:0,past:0,upcoming:0};
   if(ecology)for(const report of reports)counts[ecologyJobGroup(report,session.user.team_id)]++;
   const visibleReports=ecology?reports.filter(report=>ecologyJobGroup(report,session.user.team_id)===group):reports;
-  const groupNames={active:'Active jobs',review:'Awaiting review',past:'Past jobs'};
-  const emptyNames={active:'No active jobs.',review:'Nothing awaiting review.',past:'No past jobs.'};
-  const emptyHints={active:'Submitted and completed work stays in the other tabs.',review:'Work you send to management will appear here.',past:'Approved, closed or cancelled work will appear here.'};
+  const groupNames={upcoming:'Upcoming inspections',active:'Active jobs',review:'Awaiting review',past:'Past jobs'};
+  const emptyNames={upcoming:'No upcoming inspections.',active:'No active jobs.',review:'Nothing awaiting review.',past:'No past jobs.'};
+  const emptyHints={upcoming:'Follow-up inspections appear after management approves restoration. Overdue inspections stay here.',active:'Submitted and completed work stays in the other tabs.',review:'Work you send to management will appear here.',past:'Approved, closed or cancelled work will appear here.'};
   return <View style={styles.body}>
     <View style={styles.top}>
       <Text accessibilityRole="header" style={styles.title}>{selected?(session.user.role==='ecology'?'Job details.':'Report details.'):session.user.role==='ecology'?'My jobs.':'My sightings.'}</Text>
@@ -67,13 +67,13 @@ export function TeamReports({ onBack, initialReportId, draftId, home = false }: 
       <Button icon={({size,color})=><Glyph name="refresh" size={size} color={color}/>} loading={loading} disabled={loading} onPress={()=>{void refresh();}}>Refresh</Button>
       {loading&&<ActivityIndicator/>}
       {ecology&&<>
-        <View style={styles.filters}>{(['active','review','past'] as const).map(value=><Button key={value} compact mode={group===value?'contained':'outlined'} style={styles.filter} labelStyle={styles.filterLabel} accessibilityLabel={`${groupNames[value]}, ${counts[value]} jobs`} accessibilityState={{selected:group===value}} onPress={()=>setGroup(value)}>{value==='active'?'Active':value==='review'?'Review':'Past jobs'}</Button>)}</View>
+        <View style={styles.filters}>{(['active','upcoming','review','past'] as const).map(value=><Button key={value} compact mode={group===value?'contained':'outlined'} style={styles.filter} labelStyle={styles.filterLabel} accessibilityLabel={`${groupNames[value]}, ${counts[value]} jobs`} accessibilityState={{selected:group===value}} onPress={()=>setGroup(value)}>{value==='upcoming'?'Upcoming inspections':value==='active'?'Active':value==='review'?'Review':'Past jobs'}</Button>)}</View>
         <Text style={styles.hint} accessibilityLiveRegion="polite">{groupNames[group]} · {counts[group]}</Text>
       </>}
       {!loading&&!visibleReports.length&&<View style={styles.empty}><Text style={styles.subtitle}>{ecology?emptyNames[group]:'No sightings yet.'}</Text><Text style={styles.hint}>{ecology?emptyHints[group]:'Your team’s reports will appear here.'}</Text></View>}
       {visibleReports.map(report=><Card key={report.id} mode="outlined" style={styles.card}>
         <Card.Content style={styles.body}><Text style={styles.reference}>{report.reference} · {ecology?ecologyJobLabel(report,session.user.team_id):reportStatuses[report.status]}</Text>
-          <Text style={styles.subtitle}>{report.site}</Text><Text>{report.landmark}</Text>
+          <Text style={styles.subtitle}>{report.site}</Text><Text>{report.landmark}</Text>{ecology&&report.work_items.filter(w=>w.followup_of&&w.team_id===session.user.team_id&&!['verified','cancelled'].includes(w.status)).map(w=><Text key={w.id} style={styles.hint}>Inspection due {w.due_on}{w.overdue?' - Overdue':''}</Text>)}
           <Text style={styles.hint}>{report.prediction?.common_name??'Plant to be reviewed'}</Text><Button mode="contained-tonal" icon={({size,color})=><Glyph name="arrow" size={size} color={color}/>} onPress={()=>{setSelected(report);setError('');}}>{session.user.role==='ecology'?'Open job':'Open sighting'}</Button></Card.Content></Card>)}
     </>}
   </View>;
@@ -81,7 +81,7 @@ export function TeamReports({ onBack, initialReportId, draftId, home = false }: 
 const styles=StyleSheet.create({body:{gap:14,paddingBottom:8},top:{flexDirection:'row',flexWrap:'wrap',alignItems:'center',justifyContent:'space-between',gap:8},
   title:{fontSize:24,lineHeight:32,fontWeight:'600',color:colors.text},subtitle:{fontSize:18,lineHeight:26,fontWeight:'600',color:colors.text},
   hint:{fontSize:14,lineHeight:22,color:colors.muted},reference:{fontSize:13,lineHeight:21,color:colors.muted},
-  filters:{flexDirection:'row',gap:8},filter:{flex:1,minWidth:0},filterLabel:{marginHorizontal:6},
+  filters:{flexDirection:'row',flexWrap:'wrap',gap:8},filter:{flexGrow:1,minWidth:130},filterLabel:{marginHorizontal:6},
   tools:{flexDirection:'row',flexWrap:'wrap',gap:12},tool:{flex:1,minWidth:140},empty:{padding:20,gap:8,borderRadius:14,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surface},
   label:{fontSize:14,fontWeight:'600',marginTop:8},plan:{padding:16,gap:8,borderRadius:12,backgroundColor:colors.paleGreen},
   photo:{width:'100%',height:230,borderRadius:10,backgroundColor:colors.surface},card:{backgroundColor:colors.surface},error:{color:'#943A31',lineHeight:22}});

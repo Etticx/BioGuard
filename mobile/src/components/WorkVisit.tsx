@@ -15,6 +15,8 @@ import { CheckField } from './CheckField';
 import { colors } from '../theme';
 import { packVisitPhotos, visitPhotos } from '../services/visitPhotos';
 import {InspectionResultForm} from './InspectionResultForm';
+import {DemoLocationPicker} from './DemoLocationPicker';
+import type {GeoPoint} from '../services/elminaMap';
 import {ReportLocationMap} from './ReportLocationMap';
 import {isElminaPoint} from '../services/elminaMap';
 
@@ -23,6 +25,9 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
  const photo=useIdentification();
  const plantingPhoto=useIdentification();
  const selecting=photo.selecting||plantingPhoto.selecting;
+ const followup=Boolean(work.followup_of);
+ const [regrowth,setRegrowth]=useState<Completion['regrowth']>(null),[condition,setCondition]=useState<Completion['replacement_condition']>(),[other,setOther]=useState<Completion['other_invasive']>();
+ const [finding,setFinding]=useState<GeoPoint|null>(null),[pinning,setPinning]=useState(false);
  const restoration=work.work_type==='restoration';
  const removalRecorded=work.completions.some(item=>item.removal_complete&&item.removed_on);
  const initialStage=visitStage(work.work_type,restoration&&removalRecorded?'replanting':undefined);
@@ -55,7 +60,7 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
    if(loaded.state==='queued'){setQueued(true);return;}
    const d=loaded.details as Completion;setRestored(loaded);setRequestKey(loaded.id);setStage(visitStage(work.work_type,d.stage));
    setObserved(d.observed_on);setRemoved(d.removed_on??today());setPlanted(d.planted_on??today());setQuantity(d.quantity?.toString()??'');setNotes(d.notes);setConfirmed(d.removal_complete);setPendingReason(d.planting_pending_reason??'');
-   setSuggested(d.suggested_species??'');setRecommendation(d.recommended_action??'none');setRemovalPlan(d.removal_recommendation??'');setReplacementPlan(d.replacement_recommendation??'');
+   setRegrowth(d.regrowth);setCondition(d.replacement_condition);setOther(d.other_invasive);setFinding(d.finding_latitude!=null&&d.finding_longitude!=null?{latitude:d.finding_latitude,longitude:d.finding_longitude}:null);setSuggested(d.suggested_species??'');setRecommendation(d.recommended_action??'none');setRemovalPlan(d.removal_recommendation??'');setReplacementPlan(d.replacement_recommendation??'');
   }).catch(()=>{if(alive)setError('Could not open saved evidence. Reopen this job to retry.');});
   return()=>{alive=false;if(loaded)releaseDraft(loaded);};
  },[session,mine,work.id,work.report_id,work.revision,work.work_type,workKey,initialStage,draftId]);
@@ -68,9 +73,10 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
  const visitUri=photo.photo?.uri??savedPhotos.visit;
  const uri=stage==='replanting'?plantingUri:stage==='observation'?visitUri:removalUri;
  const primaryPhoto=stage==='replanting'?plantingPhoto:photo;
- const photos=packVisitPhotos({...savedPhotos,...(stage==='observation'?{visit:visitUri}:{removal:removalUri,planting:plantingUri})});
+ const photos=packVisitPhotos({...savedPhotos,...(stage==='observation'?{visit:visitUri,...(followup&&other==='yes'?{planting:plantingUri}:{})}:{removal:removalUri,planting:plantingUri})});
  const details:Completion={revision:work.revision,request_key:requestKey,stage,observed_on:observed,notes:notes.trim(),removal_complete:['removal','both'].includes(stage)&&confirmed,removed_on:['removal','both'].includes(stage)?removed:null,planted_on:['replanting','both'].includes(stage)?planted:null,planted_species:['replanting','both'].includes(stage)?work.replacement_species:'',quantity:['replanting','both'].includes(stage)?Number(quantity):null,...(restoration?{planting_pending_reason:stage==='removal'?pendingReason.trim():''}:{}),
-  ...(work.work_type==='inspection'?{suggested_species:suggested.trim(),recommended_action:recommendation,removal_recommendation:removalPlan.trim(),replacement_recommendation:replacementPlan.trim()}:{})};
+  ...(followup?{regrowth,replacement_condition:condition,other_invasive:other,...(other==='yes'&&finding?{finding_latitude:finding.latitude,finding_longitude:finding.longitude}:{})}:{}),
+  ...(work.work_type==='inspection'&&!followup?{suggested_species:suggested.trim(),recommended_action:recommendation,removal_recommendation:removalPlan.trim(),replacement_recommendation:replacementPlan.trim()}:{})};
  async function persist(state:'saved'|'queued'){
   if(needsReview)throw new Error('Review the latest instructions and saved evidence before continuing.');
   if(!session||!uri)throw new Error('Add an evidence photo.');
@@ -80,7 +86,8 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
  async function run(action:'accept'|'start'|'blocked'|'send'|'save'){
   if(!session||pending.current||selecting)return;
   if(action==='blocked'&&!notes.trim()){setError('Describe the problem first.');return;}
-  if(action==='send'&&work.work_type==='inspection'&&(!suggested.trim()||(recommendation==='removal'&&!removalPlan.trim())||(recommendation==='replanting'&&!replacementPlan.trim()))){setError('Add the inspected species and the recommended plan.');return;}
+  if(action==='send'&&followup&&(!regrowth||!condition||!other||(other==='yes'&&(!finding||!plantingUri)))){setError('Complete all inspection findings and add a plant photo and pin when other suspected plants are found.');return;}
+  if(action==='send'&&work.work_type==='inspection'&&!followup&&(!suggested.trim()||(recommendation==='removal'&&!removalPlan.trim())||(recommendation==='replanting'&&!replacementPlan.trim()))){setError('Add the inspected species and the recommended plan.');return;}
   if(action==='send'&&restoration&&stage==='removal'&&!pendingReason.trim()){setError('Explain why replanting is pending.');return;}
   pending.current=true;setBusy(true);setError('');
   try{
@@ -96,13 +103,14 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
   finally{pending.current=false;setBusy(false);}
  }
  return <View style={{padding:16,gap:12,borderRadius:12,backgroundColor:colors.paleGreen}}>
-  <Text variant="titleMedium">{workNames[work.work_type]??work.work_type}</Text>
+  <Text variant="titleMedium">{followup?'Follow-up inspection - '+work.confirmed_species:workNames[work.work_type]??work.work_type}</Text>
   <Text>{work.team_name} · {work.status.replaceAll('_',' ')}</Text>
   <Text>{work.due_on?'Due '+work.due_on:'Ask management for a visit date'}{work.overdue?' · Overdue':''}{work.priority==='high'?' · High priority':''}</Text>
   <Text>{work.notes}</Text>
   <Text variant="titleMedium">Plant location</Text>
   <ReportLocationMap point={isElminaPoint(work.inspection?.point)?work.inspection.point:report.location_mode==='osm'&&isElminaPoint(report)?report:null}/>
-  {work.inspection&&<InspectionResultForm work={work} report={report} onUpdate={onUpdate}/>}
+  {work.inspection&&!followup&&<InspectionResultForm work={work} report={report} onUpdate={onUpdate}/>}
+  {followup&&work.restoration_snapshot&&<><Text>Previous restoration: {work.restoration_snapshot.planted_on} - {work.restoration_snapshot.quantity} - {work.restoration_snapshot.planted_species}</Text><Text>Linked restoration: {work.followup_of}</Text><Text>The original report photos and earlier job evidence remain available above and below.</Text></>}
   {!!work.confirmed_species&&<Text>Approved species: {work.confirmed_species}</Text>}
   {!!work.removal_instructions&&<><Text variant="labelLarge">Removal instructions</Text><Text>{work.removal_instructions}</Text></>}
   {!!work.replacement_species&&<><Text variant="labelLarge">Replacement: {work.replacement_species}</Text><Text>{work.replanting_instructions}</Text></>}
@@ -113,7 +121,7 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
    {!!item.recommended_action&&<Text>Recommended action: {item.recommended_action}</Text>}
    {!!item.removal_recommendation&&<Text>{item.removal_recommendation}</Text>}{!!item.replacement_recommendation&&<Text>{item.replacement_recommendation}</Text>}
    {item.removed_on&&<Text>Removed: {item.removed_on}</Text>}{item.planted_on&&<Text>Planted: {item.planted_on} · {item.quantity} × {item.planted_species}</Text>}
-   {!!item.planting_pending_reason&&<Text>Replanting pending: {item.planting_pending_reason}</Text>}{item.regrowth&&<Text>Regrowth: {item.regrowth}</Text>}{item.checked_count!=null&&<Text>Surviving: {item.surviving_count}/{item.checked_count}</Text>}
+   {!!item.planting_pending_reason&&<Text>Replanting pending: {item.planting_pending_reason}</Text>}{item.replacement_condition&&<Text>Replacement planting: {item.replacement_condition}</Text>}{item.other_invasive&&<Text>Other suspected plants: {item.other_invasive}</Text>}{item.regrowth&&<Text>Regrowth: {item.regrowth}</Text>}{item.checked_count!=null&&<Text>Surviving: {item.surviving_count}/{item.checked_count}</Text>}
    <Text>{item.submitted_by} · {item.observed_on}</Text>
   </View>)}
   {(legacy||work.requires_reassignment)&&!ended&&<Text>This earlier assignment is read-only. Management needs to assign an ecology job.</Text>}
@@ -125,13 +133,20 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
    <Button disabled={busy||selecting} onPress={()=>setProblem(!problem)}>{problem?'Back to evidence':'Report a problem'}</Button>
    {problem?<><TextInput mode="outlined" label="Problem or obstacle" accessibilityLabel="Problem or obstacle" multiline value={notes} onChangeText={setNotes} maxLength={1600}/><Button disabled={busy||needsReview||selecting} mode="contained" onPress={()=>{void run('blocked');}}>Send problem to management</Button></>:<>
     <Text variant="titleMedium">{work.work_type==='inspection'?'Inspection findings.':'Job evidence.'}</Text>
-    {work.work_type==='inspection'&&<>
+    {work.work_type==='inspection'&&!followup&&<>
      <TextInput mode="outlined" label="Inspected species" accessibilityLabel="Inspected species" value={suggested} onChangeText={setSuggested} maxLength={160}/>
      <Text>Recommended next action</Text><View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>{(['none','inspection','removal','replanting'] as const).map(value=><Chip key={value} selected={recommendation===value} onPress={()=>setRecommendation(value)}>{value==='none'?'No further work':workNames[value]}</Chip>)}</View>
      {(recommendation==='removal'||!!removalPlan)&&<TextInput mode="outlined" label="Recommended removal plan" accessibilityLabel="Recommended removal plan" multiline maxLength={1600} value={removalPlan} onChangeText={setRemovalPlan}/>}
      {(recommendation==='replanting'||recommendation==='removal'||!!replacementPlan)&&<TextInput mode="outlined" label="Replacement recommendation" accessibilityLabel="Replacement recommendation" multiline maxLength={1600} value={replacementPlan} onChangeText={setReplacementPlan}/>}
      <Text>Management approves the next plan before work begins.</Text>
     </>}
+    {followup&&<View style={{gap:12}}>
+     <Text>Has the target invasive plant reappeared?</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{(['yes','no','unknown'] as const).map(v=><Chip key={v} selected={regrowth===v} onPress={()=>setRegrowth(v)}>{v==='yes'?'Found':v==='no'?'Not observed':'Unable to assess'}</Chip>)}</View>
+     <Text>How is the replacement planting?</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{(['healthy','struggling','dead','unable'] as const).map(v=><Chip key={v} selected={condition===v} onPress={()=>setCondition(v)}>{v==='unable'?'Unable to assess':v}</Chip>)}</View>
+     <Text>Other suspected invasive plants nearby?</Text><View style={{flexDirection:'row',gap:6}}>{(['yes','no'] as const).map(v=><Chip key={v} selected={other===v} onPress={()=>setOther(v)}>{v}</Chip>)}</View>
+     {other==='yes'&&<><Button onPress={()=>{void plantingPhoto.selectPhoto('camera');}}>Take additional plant photo</Button><Button onPress={()=>{void plantingPhoto.selectPhoto('gallery');}}>Choose additional plant photo</Button>{plantingUri&&<Image source={{uri:plantingUri}} style={{height:160,width:'100%'}} resizeMode="contain" accessibilityLabel="Additional suspected plant"/>}<Button onPress={()=>setPinning(true)}>{finding?'Change additional plant pin':'Pin additional plant'}</Button>{finding&&<Text>Pin: {finding.latitude.toFixed(6)}, {finding.longitude.toFixed(6)}</Text>}{pinning&&<DemoLocationPicker initial={finding??(isElminaPoint(report)?report:null)} onDone={p=>{setFinding(p);setPinning(false);}} onCancel={()=>setPinning(false)}/>}</>}
+     <Text>Add a current photo of the restored location and replacement planting. Explain any problems in the visit note. Submit for management review; this inspection does not authorise removal.</Text>
+    </View>}
     {restoration&&<View style={{gap:8}}><Text>Record this restoration job</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{(['both','removal',...(removalRecorded?['replanting'] as const:[])] as Completion['stage'][]).map(value=><Chip key={value} selected={stage===value} onPress={()=>setStage(value)}>{value==='both'?'Both completed':value==='removal'?'Planting pending':'Finish planting'}</Chip>)}</View>{stage==='removal'&&<TextInput mode="outlined" label="Why is replanting pending?" accessibilityLabel="Why is replanting pending?" value={pendingReason} onChangeText={setPendingReason} multiline maxLength={1600}/>}</View>}
     {['removal','both'].includes(stage)&&<><CheckField label="Removal completed as instructed" checked={confirmed} onChange={setConfirmed}/><TextInput mode="outlined" label="Removed on (YYYY-MM-DD)" accessibilityLabel="Removed on (YYYY-MM-DD)" value={removed} onChangeText={setRemoved}/></>}
     {['replanting','both'].includes(stage)&&<><Text>Approved replacement: {work.replacement_species}</Text><TextInput mode="outlined" label="Planted on (YYYY-MM-DD)" accessibilityLabel="Planted on (YYYY-MM-DD)" value={planted} onChangeText={setPlanted}/><TextInput mode="outlined" label="Quantity planted" accessibilityLabel="Quantity planted" keyboardType="number-pad" value={quantity} onChangeText={setQuantity}/></>}
