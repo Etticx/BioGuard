@@ -21,6 +21,11 @@ def conflict(message):
     raise RecordConflict(message)
 
 
+def require_inspection_day(data):
+    if data.get("followup_of") and data.get("due_on") != field_today().isoformat():
+        raise ValueError("This inspection can only be updated on its scheduled date (Malaysia time). Ask management to reschedule a missed visit.")
+
+
 TERMINAL = {"verified", "cancelled"}
 
 
@@ -170,6 +175,7 @@ class OperationsMixin:
         value.update({key:row[key] for key in ("id","report_id","team_id","status","revision","created_at","updated_at")})
         team=db.execute("SELECT name,role FROM teams WHERE id=?",(row["team_id"],)).fetchone()
         value["team_name"]=team[0] if team else "Former team"
+        value["inspection_open_today"]=not value.get("followup_of") or value.get("due_on")==field_today().isoformat()
         value["legacy"]=value.get("work_type") not in {"restoration","inspection","removal","replanting"}
         value["requires_reassignment"]=row["status"] not in TERMINAL and (not team or team["role"]!="ecology")
         value["overdue"]=bool(value.get("due_on") and value["due_on"]<field_today().isoformat() and row["status"] not in TERMINAL | {"awaiting_verification"})
@@ -276,6 +282,7 @@ class OperationsMixin:
             if not db.execute("SELECT teams.id FROM teams JOIN users ON users.team_id=teams.id WHERE teams.id=? AND teams.role='ecology' AND teams.active=1 AND users.id=? AND users.role='ecology' AND users.active=1",(work["team_id"],user["id"])).fetchone():return None
             if work["revision"]!=revision or work["status"] not in {"assigned","accepted","in_progress","correction_requested","blocked"}:conflict("Refresh this visit before updating it.")
             data=json.loads(work["data"])
+            require_inspection_day(data)
             if data.get("work_type") not in {"restoration","inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Ask management for a new assignment.")
             if action=="accept":
                 if work["status"]!="assigned":conflict("This job has already been accepted. Refresh it.")
@@ -307,6 +314,8 @@ class OperationsMixin:
                 if previous["digest"]!=digest:conflict("This evidence submission key was already used for different content.")
                 return self.get_report(identifier,user)
             if work["revision"]!=details["revision"] or work["status"] not in {"accepted","in_progress","correction_requested","blocked"}:conflict("This visit changed. Refresh it before submitting evidence.")
+            require_inspection_day(data)
+            if data.get("followup_of") and details.get("observed_on")!=data.get("due_on"):raise ValueError("The visit date must match the scheduled inspection date.")
             if data.get('inspection') and not data.get('followup_of') and not data.get('inspections'):raise ValueError('Record the inspection result before submitting restoration evidence.')
             kind=data["work_type"];stage=details["stage"]
             if kind not in {"restoration","inspection","removal","replanting"}:raise ValueError("This historical visit is read-only. Ask management for a new assignment.")

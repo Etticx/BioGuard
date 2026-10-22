@@ -23,7 +23,7 @@ def ready(setup, days_ago=0):
 def approved(setup, **change):
     client, _, management, *_ = setup
     report = ready(setup)
-    response = verify(client, management, report, **change)
+    response = verify(client, management, report, **({"next_visit_on":str(field_today()), **change}))
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -192,3 +192,34 @@ def test_followup_cannot_be_converted_to_removal_by_revising_instructions(setup)
     plan=assignment(team,work['revision'],work_type='restoration')
     response=client.post(f"/reports/{report['id']}/work/{work['id']}/revise",headers=management,json=plan)
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize("offset",[-1,1])
+def test_followup_updates_only_on_scheduled_malaysia_date(setup,monkeypatch,offset):
+    import operations
+    client, _, _, _, _, _, ecology, _ = setup
+    report=approved(setup)
+    scheduled=field_today()
+    report=accept(client,ecology,report)
+    monkeypatch.setattr(operations,'field_today',lambda: scheduled+timedelta(days=offset))
+    work=followup(report)
+    response=client.post(f"/reports/{report['id']}/work/{work['id']}/progress",headers=ecology,json={"revision":work['revision'],"action":"blocked","notes":"Synthetic obstacle"})
+    assert response.status_code==422
+    assert findings(setup,report).status_code==422
+    fresh=client.get('/reports/'+report['id'],headers=ecology).json()
+    assert followup(fresh)['inspection_open_today'] is False
+
+
+def test_followup_rejects_backdated_visit_date_even_on_scheduled_day(setup):
+    client, _, _, _, _, _, ecology, _ = setup
+    report=accept(client,ecology,approved(setup))
+    response=findings(setup,report,observed_on=str(field_today()-timedelta(days=1)))
+    assert response.status_code==422
+
+
+def test_upcoming_inspection_cannot_be_accepted_early(setup):
+    client, _, _, _, _, _, ecology, _=setup
+    report=approved(setup,next_visit_on=str(field_today()+timedelta(days=14)))
+    work=followup(report)
+    response=client.post(f"/reports/{report['id']}/work/{work['id']}/progress",headers=ecology,json={"revision":work['revision'],"action":"accept"})
+    assert response.status_code==422

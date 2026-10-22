@@ -1,6 +1,7 @@
+import { ActionButton } from './ActionButton';
 import { useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
-import { Button, Chip, Text, TextInput } from 'react-native-paper';
+import { Button, Text, TextInput } from 'react-native-paper';
 import { router } from 'expo-router';
 import { useIdentification } from '../hooks/useIdentification';
 import { useTeamSession } from '../hooks/useTeamSession';
@@ -35,12 +36,12 @@ export function ReportForm({uri,prediction,initial,onDone,onCancel}:{uri:string;
  if(!session||session.user.must_change_password)return <View style={styles.body}><TeamSignIn/><Button onPress={onCancel}>Back</Button></View>;
  return <View style={styles.body}><Text accessibilityRole="header" style={styles.title}>Report sighting.</Text><Image source={{uri}} style={styles.overview} resizeMode="contain" accessibilityLabel="Sighting photo"/>
  <View style={styles.summary}><Text variant="titleMedium">{prediction?.common_name??'Plant to be reviewed'}</Text><Text style={styles.hint}>{prediction?.predicted_species??'The ecology team can inspect this sighting.'}</Text></View>
- {prediction&&<CheckField label="I am unsure about this match" checked={questioned} onChange={setQuestioned} disabled={busy}/>}
+ {prediction&&<CheckField boxed label="I am unsure about this match" checked={questioned} onChange={setQuestioned} disabled={busy}/>}
  {(catalog.sites.length>0||!!siteId)&&<SelectField label="Site" value={siteId} disabled={busy} options={[{value:'',label:'Other site'},...catalog.sites.map(item=>({value:item.id,label:item.name}))]} onChange={id=>{setSiteId(id);setBlockId('');setSite(catalog.sites.find(item=>item.id===id)?.name??'');}}/>}
  {!siteId&&<TextInput label="Site or block" accessibilityLabel="Site or block" mode="outlined" value={site} onChangeText={setSite} maxLength={100} disabled={busy}/>}
  {siteId&&(!!blockId||catalog.blocks.some(item=>item.site_id===siteId))&&<SelectField label="Block (optional)" value={blockId} disabled={busy} options={[{value:'',label:'No block'},...catalog.blocks.filter(item=>item.site_id===siteId).map(item=>({value:item.id,label:item.name}))]} onChange={setBlockId}/>}
  <TextInput label="Nearby landmark" accessibilityLabel="Nearby landmark" mode="outlined" value={landmark} onChangeText={setLandmark} maxLength={200} disabled={busy}/>
- <Text>How much is there?</Text><View style={styles.choices}>{([['one','One plant'],['few','A few plants'],['patch','A patch'],['unsure','Not sure']] as [Extent,string][]).map(([value,label])=><Chip key={value} selected={extent===value} onPress={()=>setExtent(value)} disabled={busy}>{label}</Chip>)}</View>
+ <Text>How much is there?</Text><View style={styles.choices}>{([['one','One plant'],['few','A few plants'],['patch','A patch'],['unsure','Not sure']] as [Extent,string][]).map(([value,label])=><ActionButton key={value} mode={extent===value?"contained":"outlined"} accessibilityLabel={label} accessibilityState={{selected:extent===value}} onPress={()=>setExtent(value)} disabled={busy} compact style={{borderRadius:8}} contentStyle={{minHeight:36,paddingVertical:0}} labelStyle={{fontSize:13,marginHorizontal:12,marginVertical:8}}>{label}</ActionButton>)}</View>
  <TextInput label="Observed on (YYYY-MM-DD)" accessibilityLabel="Observed on (YYYY-MM-DD)" mode="outlined" value={date} onChangeText={setDate} maxLength={10} disabled={busy}/>
  <TextInput label="Note (optional)" accessibilityLabel="Note (optional)" mode="outlined" value={notes} onChangeText={setNotes} maxLength={1200} multiline disabled={busy}/>
  <View style={styles.summary}><Text variant="titleMedium">Plant location</Text><Text style={styles.hint}>{mapPoint?'Location pinned near Elmina Lakeside Mall.':original?.demo_pin?'Older image-map draft. Pin the plant again on the live map.':'Pin where the plant was found.'}</Text><Button mode="outlined" disabled={busy} onPress={()=>setPickerOpen(true)}>{mapPoint?'Change plant location':'Pin plant location'}</Button></View>

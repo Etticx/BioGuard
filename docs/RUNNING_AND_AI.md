@@ -55,3 +55,5 @@ This requires an Expo account and may be subject to its build quota. It is not p
 The owner-only `Start-RemoteBeta.ps1` / `Stop-RemoteBeta.ps1` route requires its own tunnel utility and prepared server. Restarting a temporary tunnel can change its address, requiring a rebuilt APK. No remote server, tunnel or account is started by these documentation changes.
 
 Inspection drafting sends the sourced species-rule bundle and block/water labels plus report site, landmark, notes and extent to the configured AI provider. Do not put private personal details in report notes. Photos and precise latitude/longitude are not included in that inspection prompt.
+
+When updating the browser build while Expo mode is running, use `npm run build:web:beta` from `mobile/`, then refresh the browser. This command always builds private-beta sign-in and uses the same backend origin for login cookies. A plain `expo export` without those settings can produce the anonymous prototype screen and lose the browser login after refresh. Expo Go still uses the separate LAN API address configured by the launcher.

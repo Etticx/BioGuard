@@ -20,12 +20,20 @@ import type {GeoPoint} from '../services/elminaMap';
 import {ReportLocationMap} from './ReportLocationMap';
 import {isElminaPoint} from '../services/elminaMap';
 
+function malaysiaDay(){return new Date(Date.now()+8*60*60*1000).toISOString().slice(0,10);}
+function InspectionChoices({label,options,value,onChange}:{label:string;options:[string,string][];value:string|null|undefined;onChange:(value:string)=>void}){
+ return <View style={{gap:8}}><Text style={{fontWeight:'600'}}>{label}</Text>{options.map(([key,title])=><Button key={key} mode={value===key?'contained':'outlined'} accessibilityLabel={title} accessibilityState={{selected:value===key}} onPress={()=>onChange(key)} style={{borderWidth:1,borderColor:value===key?'#245B45':colors.controlBorder}}>{title}{value===key?' (Selected)':''}</Button>)}</View>;
+}
+
 export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:FieldReport;onUpdate:(report:FieldReport)=>void;draftId?:string}){
  const {session,endSession}=useTeamSession();
  const photo=useIdentification();
  const plantingPhoto=useIdentification();
  const selecting=photo.selecting||plantingPhoto.selecting;
  const followup=Boolean(work.followup_of);
+ const [calendarDay,setCalendarDay]=useState(malaysiaDay);
+ useEffect(()=>{const timer=setInterval(()=>setCalendarDay(malaysiaDay()),30000);return()=>clearInterval(timer);},[]);
+ const dateLocked=followup&&work.due_on!==calendarDay;
  const [regrowth,setRegrowth]=useState<Completion['regrowth']>(null),[condition,setCondition]=useState<Completion['replacement_condition']>(),[other,setOther]=useState<Completion['other_invasive']>();
  const [finding,setFinding]=useState<GeoPoint|null>(null),[pinning,setPinning]=useState(false);
  const restoration=work.work_type==='restoration';
@@ -50,7 +58,7 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
  const mine=session?.user.role==='ecology'&&session.user.team_id===work.team_id;
  const legacy=Boolean(work.legacy)||!['restoration','inspection','removal','replanting'].includes(work.work_type);
  const ready=mine&&!legacy&&!work.requires_reassignment;
- const editable=ready&&['accepted','in_progress','blocked','correction_requested'].includes(work.status);
+ const editable=ready&&!dateLocked&&['accepted','in_progress','blocked','correction_requested'].includes(work.status);
 
  useEffect(()=>{
   if(!session||!mine)return;
@@ -74,7 +82,7 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
  const uri=stage==='replanting'?plantingUri:stage==='observation'?visitUri:removalUri;
  const primaryPhoto=stage==='replanting'?plantingPhoto:photo;
  const photos=packVisitPhotos({...savedPhotos,...(stage==='observation'?{visit:visitUri,...(followup&&other==='yes'?{planting:plantingUri}:{})}:{removal:removalUri,planting:plantingUri})});
- const details:Completion={revision:work.revision,request_key:requestKey,stage,observed_on:observed,notes:notes.trim(),removal_complete:['removal','both'].includes(stage)&&confirmed,removed_on:['removal','both'].includes(stage)?removed:null,planted_on:['replanting','both'].includes(stage)?planted:null,planted_species:['replanting','both'].includes(stage)?work.replacement_species:'',quantity:['replanting','both'].includes(stage)?Number(quantity):null,...(restoration?{planting_pending_reason:stage==='removal'?pendingReason.trim():''}:{}),
+ const details:Completion={revision:work.revision,request_key:requestKey,stage,observed_on:followup?(work.due_on??observed):observed,notes:notes.trim(),removal_complete:['removal','both'].includes(stage)&&confirmed,removed_on:['removal','both'].includes(stage)?removed:null,planted_on:['replanting','both'].includes(stage)?planted:null,planted_species:['replanting','both'].includes(stage)?work.replacement_species:'',quantity:['replanting','both'].includes(stage)?Number(quantity):null,...(restoration?{planting_pending_reason:stage==='removal'?pendingReason.trim():''}:{}),
   ...(followup?{regrowth,replacement_condition:condition,other_invasive:other,...(other==='yes'&&finding?{finding_latitude:finding.latitude,finding_longitude:finding.longitude}:{})}:{}),
   ...(work.work_type==='inspection'&&!followup?{suggested_species:suggested.trim(),recommended_action:recommendation,removal_recommendation:removalPlan.trim(),replacement_recommendation:replacementPlan.trim()}:{})};
  async function persist(state:'saved'|'queued'){
@@ -85,6 +93,7 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
  }
  async function run(action:'accept'|'blocked'|'send'|'save'){
   if(!session||pending.current||selecting)return;
+  if(followup&&work.due_on!==malaysiaDay()){setError('This inspection can only be updated on its scheduled date. Ask management to reschedule a missed visit.');return;}
   if(action==='blocked'&&!notes.trim()){setError('Describe the problem first.');return;}
   if(action==='send'&&followup&&(!regrowth||!condition||!other||(other==='yes'&&(!finding||!plantingUri)))){setError('Complete all inspection findings and add a plant photo and pin when other suspected plants are found.');return;}
   if(action==='send'&&work.work_type==='inspection'&&!followup&&(!suggested.trim()||(recommendation==='removal'&&!removalPlan.trim())||(recommendation==='replanting'&&!replacementPlan.trim()))){setError('Add the inspected species and the recommended plan.');return;}
@@ -126,7 +135,8 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
   </View>)}
   {(legacy||work.requires_reassignment)&&!ended&&<Text>This earlier assignment is read-only. Management needs to assign an ecology job.</Text>}
   {restored&&!editable&&<><Text variant="titleMedium">Saved evidence draft</Text><Text>{(restored.details as Completion).notes}</Text><Text>Visited on: {(restored.details as Completion).observed_on}</Text>{restored.uris[0]&&<Image source={{uri:restored.uris[0]}} resizeMode="contain" style={{width:'100%',height:180}} accessibilityLabel="Saved evidence preview"/>}<Text>Your local draft has been kept.</Text></>}
-  {ready&&work.status==='assigned'&&<Button mode="contained" loading={busy} disabled={busy||loading||selecting} onPress={()=>{void run('accept');}}>Accept job</Button>}
+  {ready&&!dateLocked&&work.status==='assigned'&&<Button mode="contained" loading={busy} disabled={busy||loading||selecting} onPress={()=>{void run('accept');}}>Accept job</Button>}
+  {dateLocked&&!ended&&work.status!=='awaiting_verification'&&<View style={{padding:16,gap:6,borderWidth:1,borderColor:colors.controlBorder,borderRadius:12,backgroundColor:colors.surface}}><Text style={{fontWeight:'600'}}>Inspection scheduled for {work.due_on}</Text><Text>{work.due_on&&work.due_on<calendarDay?'This visit date has passed. Ask Management to reschedule before recording findings.':'Accepting the inspection and recording findings will unlock on this date.'}</Text><Text>Malaysia time. The map and previous work remain available to view.</Text></View>}
   {editable&&!loading&&(queued?<><Text>Evidence saved for retry. Wait for the upload receipt.</Text><Button onPress={()=>router.push('/drafts')}>Open drafts & uploads</Button></>:<>
    {restored&&(restored.details as Completion).revision!==work.revision&&<><Text accessibilityLiveRegion="polite">This job changed after the evidence was saved. Check the current instructions, photo, dates and notes.</Text>{!!(restored.details as Completion).planted_species&&<Text>Saved planting species: {(restored.details as Completion).planted_species}</Text>}<CheckField label="I reviewed this evidence against the current job instructions" checked={reviewed} onChange={setReviewed} disabled={busy}/></>}
    <Button disabled={busy||selecting} onPress={()=>setProblem(!problem)}>{problem?'Back to evidence':'Report a problem'}</Button>
@@ -140,16 +150,16 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
      <Text>Management approves the next plan before work begins.</Text>
     </>}
     {followup&&<View style={{gap:12}}>
-     <Text>Has the target invasive plant reappeared?</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{(['yes','no','unknown'] as const).map(v=><Chip key={v} selected={regrowth===v} onPress={()=>setRegrowth(v)}>{v==='yes'?'Found':v==='no'?'Not observed':'Unable to assess'}</Chip>)}</View>
-     <Text>How is the replacement planting?</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{(['healthy','struggling','dead','unable'] as const).map(v=><Chip key={v} selected={condition===v} onPress={()=>setCondition(v)}>{v==='unable'?'Unable to assess':v}</Chip>)}</View>
-     <Text>Other suspected invasive plants nearby?</Text><View style={{flexDirection:'row',gap:6}}>{(['yes','no'] as const).map(v=><Chip key={v} selected={other===v} onPress={()=>setOther(v)}>{v}</Chip>)}</View>
+     <InspectionChoices label="Has the target invasive plant reappeared?" options={[["yes","Found"],["no","Not observed"],["unknown","Unable to assess"]]} value={regrowth} onChange={v=>setRegrowth(v as Completion["regrowth"])}/>
+     <InspectionChoices label="How is the replacement planting?" options={[["healthy","Healthy"],["struggling","Struggling"],["dead","Dead"],["unable","Unable to assess"]]} value={condition} onChange={v=>setCondition(v as Completion["replacement_condition"])}/>
+     <InspectionChoices label="Other suspected invasive plants nearby?" options={[["yes","Yes"],["no","No"]]} value={other} onChange={v=>setOther(v as Completion["other_invasive"])}/>
      {other==='yes'&&<><Button onPress={()=>{void plantingPhoto.selectPhoto('camera');}}>Take additional plant photo</Button><Button onPress={()=>{void plantingPhoto.selectPhoto('gallery');}}>Choose additional plant photo</Button>{plantingUri&&<Image source={{uri:plantingUri}} style={{height:160,width:'100%'}} resizeMode="contain" accessibilityLabel="Additional suspected plant"/>}<Button onPress={()=>setPinning(true)}>{finding?'Change additional plant pin':'Pin additional plant'}</Button>{finding&&<Text>Pin: {finding.latitude.toFixed(6)}, {finding.longitude.toFixed(6)}</Text>}{pinning&&<DemoLocationPicker initial={finding??(isElminaPoint(report)?report:null)} onDone={p=>{setFinding(p);setPinning(false);}} onCancel={()=>setPinning(false)}/>}</>}
      <Text>Add a current photo of the restored location and replacement planting. Explain any problems in the visit note. Submit for management review; this inspection does not authorise removal.</Text>
     </View>}
     {restoration&&<View style={{gap:8}}><Text>Record this restoration job</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{(['both','removal',...(removalRecorded?['replanting'] as const:[])] as Completion['stage'][]).map(value=><Chip key={value} selected={stage===value} onPress={()=>setStage(value)}>{value==='both'?'Both completed':value==='removal'?'Planting pending':'Finish planting'}</Chip>)}</View>{stage==='removal'&&<TextInput mode="outlined" label="Why is replanting pending?" accessibilityLabel="Why is replanting pending?" value={pendingReason} onChangeText={setPendingReason} multiline maxLength={1600}/>}</View>}
     {['removal','both'].includes(stage)&&<><CheckField label="Removal completed as instructed" checked={confirmed} onChange={setConfirmed}/><TextInput mode="outlined" label="Removed on (YYYY-MM-DD)" accessibilityLabel="Removed on (YYYY-MM-DD)" value={removed} onChangeText={setRemoved}/></>}
     {['replanting','both'].includes(stage)&&<><Text>Approved replacement: {work.replacement_species}</Text><TextInput mode="outlined" label="Planted on (YYYY-MM-DD)" accessibilityLabel="Planted on (YYYY-MM-DD)" value={planted} onChangeText={setPlanted}/><TextInput mode="outlined" label="Quantity planted" accessibilityLabel="Quantity planted" keyboardType="number-pad" value={quantity} onChangeText={setQuantity}/></>}
-    <TextInput mode="outlined" label="Visited on (YYYY-MM-DD)" accessibilityLabel="Visited on (YYYY-MM-DD)" value={observed} onChangeText={setObserved}/>
+    {followup?<Text>Inspection visit date: {work.due_on} (Malaysia time)</Text>:<TextInput mode="outlined" label="Visited on (YYYY-MM-DD)" accessibilityLabel="Visited on (YYYY-MM-DD)" value={observed} onChangeText={setObserved}/>}
     <TextInput mode="outlined" label="Visit note" accessibilityLabel="Visit note" multiline maxLength={1600} value={notes} onChangeText={setNotes}/>
     {uri&&<Image source={{uri}} resizeMode="contain" style={{width:'100%',height:180}} accessibilityLabel="Removal or visit evidence preview"/>}
     <Button mode="outlined" disabled={busy||selecting} onPress={()=>{void primaryPhoto.selectPhoto('camera');}}>{restoration?(stage==='replanting'?'Take replanting photo':'Take removal photo'):'Take evidence photo'}</Button>

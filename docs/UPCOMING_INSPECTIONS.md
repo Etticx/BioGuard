@@ -16,6 +16,8 @@ Replanting that is still pending does not start this post-planting follow-up. Fo
 
 Open Upcoming inspections and select the assigned inspection. Use the original map pin, block boundary and restoration evidence to find the location.
 
+The scheduled due date is the required inspection visit date, using Malaysia time. Ecology can view the map and previous evidence beforehand, but can only accept, update or submit the inspection on that date. The visit date is fixed. Early or late submissions are rejected by the backend; Management must reschedule a missed visit.
+
 Record whether the target invasive plant has reappeared, the condition of replacement planting, and whether other suspected invasive plants were found nearby. Add current photos and notes; record the location of additional findings. Submit the findings to management for review.
 
 Submitting an inspection does not close the case or authorise new removal. Management must approve corrective work. Completed corrective restoration is reviewed before its next follow-up is created.

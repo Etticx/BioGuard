@@ -46,7 +46,8 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "eas-build-post-install": "node scripts/check-build.mjs",
-    "postinstall": "node scripts/patch-query-decoder.mjs"
+    "postinstall": "node scripts/patch-query-decoder.mjs",
+    "build:web:beta": "node scripts/export-private-beta.mjs"
   },
   "private": true,
   "overrides": {

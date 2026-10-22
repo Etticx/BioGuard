@@ -41,7 +41,7 @@ try {
     New-Item -ItemType Directory -Force -Path $bioData | Out-Null
     Push-Location -LiteralPath $bioMobile
     try {
-        & $bioNode node_modules/expo/bin/cli export --platform web --clear --output-dir .beta-dist
+        & $bioNode scripts/export-private-beta.mjs
         if ($LASTEXITCODE -ne 0) { throw 'Beta web build failed.' }
     } finally { Pop-Location }
     $bioAddress = 'YOUR_LAPTOP_IP'

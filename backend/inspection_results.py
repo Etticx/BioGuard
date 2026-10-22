@@ -1,7 +1,7 @@
 """Approved inspection snapshots and additional sightings. Never authorises removal."""
 import json
 from uuid import uuid4
-from operations import now,conflict
+from operations import now,conflict,require_inspection_day
 from inspection_guidance import guidance
 
 def snapshot(brief,species,report,user):
@@ -24,6 +24,8 @@ class InspectionResultsMixin:
                 if previous['digest']!=digest:conflict('This inspection submission key was already used for different content.')
                 return self.get_report(identifier,user)
             if work['revision']!=details['revision'] or work['status'] not in {'accepted','in_progress','blocked','correction_requested'}:conflict('Refresh this job before recording inspection results.')
+            require_inspection_day(data)
+            if data.get('followup_of') and details.get('observed_on')!=data.get('due_on'):raise ValueError('The visit date must match the scheduled inspection date.')
             if not data.get('inspection'):raise ValueError('Management must save inspection instructions for this job first.')
             if len(photos)!=len(details['findings']):raise ValueError('Each additional plant needs a photo and pin.')
             item={**details,'id':uuid4().hex,'digest':digest,'submitted_at':now(),'submitted_by':user['display_name'],'species':data['inspection']['species'],'review_status':'pending','photo_ids':[]}
