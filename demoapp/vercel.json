@@ -1,0 +1,32 @@
+{
+  "rewrites": [
+    {
+      "source": "/officer",
+      "destination": "/officer/index.html"
+    },
+    {
+      "source": "/maps/elmina",
+      "destination": "/maps/elmina/index.html"
+    },
+    {
+      "source": "/team",
+      "destination": "/team/index.html"
+    },
+    {
+      "source": "/report",
+      "destination": "/report/index.html"
+    },
+    {
+      "source": "/drafts",
+      "destination": "/drafts/index.html"
+    },
+    {
+      "source": "/updates",
+      "destination": "/updates/index.html"
+    },
+    {
+      "source": "/beta-information",
+      "destination": "/beta-information/index.html"
+    }
+  ]
+}

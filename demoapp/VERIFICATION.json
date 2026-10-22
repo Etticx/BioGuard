@@ -1,0 +1,40 @@
+{
+  "frontend_only": true,
+  "original_screens": [
+    "Grounds",
+    "Ecology",
+    "Management"
+  ],
+  "verified_flow": [
+    "login",
+    "sample photo upload",
+    "sample classification",
+    "report form",
+    "OSM pin",
+    "report submission",
+    "Management plan review",
+    "Ecology acceptance",
+    "initial inspection",
+    "removal and replanting evidence",
+    "Management approval",
+    "scheduled follow-up",
+    "early-date lock",
+    "demo clock advance",
+    "follow-up findings",
+    "final review and closure",
+    "client PDF download",
+    "refresh persistence",
+    "phone-width layout"
+  ],
+  "browser_errors": 0,
+  "backend_calls": 0,
+  "ai_requests": 0,
+  "storage": "Browser localStorage and IndexedDB",
+  "hosting": "Static site root; no build command",
+  "external_map_tiles": "OpenStreetMap (internet required)",
+  "guided_walkthrough": {
+    "highlighted_actions_to_pdf": 49,
+    "browser_errors": 0,
+    "phone_highlight_pointer_scroll_hide_resume": "passed"
+  }
+}
