@@ -83,7 +83,7 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
   if(state==='queued'&&restoration&&stage==='both'&&!plantingUri)throw new Error('Add the replanting photo.');
   await saveDraft({id:requestKey,owner:session.user.id,kind:'completion',state,label:workNames[work.work_type]+' evidence',details,reportId:work.report_id,workId:work.id,...(restored?.continuationOf?{continuationOf:restored.continuationOf}:{}),...photos});
  }
- async function run(action:'accept'|'start'|'blocked'|'send'|'save'){
+ async function run(action:'accept'|'blocked'|'send'|'save'){
   if(!session||pending.current||selecting)return;
   if(action==='blocked'&&!notes.trim()){setError('Describe the problem first.');return;}
   if(action==='send'&&followup&&(!regrowth||!condition||!other||(other==='yes'&&(!finding||!plantingUri)))){setError('Complete all inspection findings and add a plant photo and pin when other suspected plants are found.');return;}
@@ -129,7 +129,6 @@ export function WorkVisit({work,report,onUpdate,draftId}:{work:WorkItem;report:F
   {ready&&work.status==='assigned'&&<Button mode="contained" loading={busy} disabled={busy||loading||selecting} onPress={()=>{void run('accept');}}>Accept job</Button>}
   {editable&&!loading&&(queued?<><Text>Evidence saved for retry. Wait for the upload receipt.</Text><Button onPress={()=>router.push('/drafts')}>Open drafts & uploads</Button></>:<>
    {restored&&(restored.details as Completion).revision!==work.revision&&<><Text accessibilityLiveRegion="polite">This job changed after the evidence was saved. Check the current instructions, photo, dates and notes.</Text>{!!(restored.details as Completion).planted_species&&<Text>Saved planting species: {(restored.details as Completion).planted_species}</Text>}<CheckField label="I reviewed this evidence against the current job instructions" checked={reviewed} onChange={setReviewed} disabled={busy}/></>}
-   {work.status==='accepted'&&<Button disabled={busy||needsReview||selecting} mode="outlined" onPress={()=>{void run('start');}}>Start work</Button>}
    <Button disabled={busy||selecting} onPress={()=>setProblem(!problem)}>{problem?'Back to evidence':'Report a problem'}</Button>
    {problem?<><TextInput mode="outlined" label="Problem or obstacle" accessibilityLabel="Problem or obstacle" multiline value={notes} onChangeText={setNotes} maxLength={1600}/><Button disabled={busy||needsReview||selecting} mode="contained" onPress={()=>{void run('blocked');}}>Send problem to management</Button></>:<>
     <Text variant="titleMedium">{work.work_type==='inspection'?'Inspection findings.':'Job evidence.'}</Text>
